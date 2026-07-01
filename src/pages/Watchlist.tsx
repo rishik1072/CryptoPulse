@@ -57,8 +57,8 @@ export default function Watchlist() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">Watchlist</h1>
-          <p className="mt-2 text-sm text-slate-400 sm:text-base">Live updates • {items.length} assets</p>
+          <h1 className="text-4xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-5xl">Watchlist</h1>
+          <p className="mt-2 text-sm text-slate-500 sm:text-base">Live updates • {items.length} assets</p>
         </div>
 
         <div className="flex w-full max-w-sm gap-3">
@@ -69,7 +69,7 @@ export default function Watchlist() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search watchlist..."
-              className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-400"
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 placeholder:text-slate-400"
             />
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function Watchlist() {
           <button
             key={f.value}
             onClick={() => setFilter(f.value as 'all' | 'pinned' | 'positive' | 'negative')}
-            className={`rounded-full px-5 py-2 text-sm font-medium transition-all ${filter === f.value ? 'bg-white text-slate-950' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+            className={`rounded-full px-5 py-2 text-sm font-medium transition-all ${filter === f.value ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
           >
             {f.label}
           </button>
@@ -103,7 +103,7 @@ export default function Watchlist() {
             axis="y" 
             values={watchlistWithData} 
             onReorder={handleReorder}
-            className="divide-y divide-white/10"
+            className="divide-y divide-slate-100"
           >
             {watchlistWithData.map((item) => {
               const isPositive = item.change >= 0
@@ -111,33 +111,33 @@ export default function Watchlist() {
                 <Reorder.Item
                   key={item.id}
                   value={item}
-                  className="flex items-center justify-between px-8 py-5 hover:bg-white/5 group transition-colors"
+                  className="group flex items-center justify-between px-8 py-5 transition-colors hover:bg-slate-50"
                 >
                   <div className="flex items-center gap-4">
-                    <GripVertical className="h-4 w-4 text-muted cursor-grab active:cursor-grabbing" />
+                    <GripVertical className="h-4 w-4 cursor-grab text-slate-400 active:cursor-grabbing" />
                     
                     <img src={item.image} alt="" className="h-8 w-8 rounded-full" />
                     
                     <div>
-                      <div className="font-medium flex items-center gap-2">
+                      <div className="flex items-center gap-2 font-medium text-slate-900">
                         {item.name}
-                        {item.pinned && <Star className="h-3.5 w-3.5 text-warning fill-warning" />}
+                        {item.pinned && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />}
                       </div>
-                      <div className="text-xs text-muted">{item.symbol}</div>
+                      <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{item.symbol}</div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-10 text-right font-mono tabular-nums">
                     <div>
-                      <div className="text-xs text-muted text-left">Price</div>
-                      <div className={`text-lg transition-colors ${isPositive ? 'text-success' : 'text-danger'}`}>
+                      <div className="text-left text-xs text-slate-500">Price</div>
+                      <div className={`text-lg transition-colors ${isPositive ? 'text-emerald-600' : 'text-rose-500'}`}>
                         ${item.price.toLocaleString()}
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-xs text-muted text-left">24H</div>
-                      <div className={isPositive ? 'text-success' : 'text-danger'}>
+                      <div className="text-left text-xs text-slate-500">24H</div>
+                      <div className={isPositive ? 'text-emerald-600' : 'text-rose-500'}>
                         {isPositive ? '+' : ''}{item.change.toFixed(2)}%
                       </div>
                     </div>
@@ -149,13 +149,13 @@ export default function Watchlist() {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => togglePin(item.coinId)}
-                        className="p-2 rounded-xl hover:bg-white/10 transition-all"
+                        className="rounded-xl p-2 transition-all hover:bg-slate-100"
                       >
                         <Star className={`h-4 w-4 ${item.pinned ? 'fill-warning text-warning' : 'text-muted'}`} />
                       </button>
                       <button 
                         onClick={() => removeFromWatchlist(item.coinId)}
-                        className="p-2 rounded-xl hover:bg-white/10 text-muted hover:text-danger transition-all"
+                        className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-rose-500"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

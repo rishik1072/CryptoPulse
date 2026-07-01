@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 export interface CoinMarketData {
   id: string
@@ -52,6 +52,25 @@ export const useMarketData = (limit = 10) => {
       fetch(
         `${BASE_URL}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1&sparkline=false`
       ).then(res => res.json()),
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  })
+}
+
+export const useInfiniteMarketData = (perPage = 50) => {
+  return useInfiniteQuery<CoinMarketData[]>({
+    queryKey: ['markets-infinite', perPage],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      fetch(
+        `${BASE_URL}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${perPage}&page=${pageParam}&sparkline=false`
+      ).then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch markets')
+        }
+        return res.json()
+      }),
+    getNextPageParam: (lastPage, allPages) => (lastPage.length === perPage ? allPages.length + 1 : undefined),
     staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 15,
   })

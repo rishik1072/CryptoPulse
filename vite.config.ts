@@ -20,6 +20,32 @@ export default defineConfig({
       '@assets': path.resolve(__dirname, './src/assets'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('@clerk')) {
+              return 'vendor-clerk'
+            }
+            if (id.includes('lightweight-charts') || id.includes('recharts')) {
+              return 'vendor-charts'
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion'
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons'
+            }
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     open: true,

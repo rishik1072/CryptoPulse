@@ -38,19 +38,20 @@ export const pageTransition: Variants = {
 export const cardHover = {
   whileHover: { 
     y: -3, 
-    scale: 1.005,
-    transition: easings.gentle 
+    scale: 1.006,
+    transition: { duration: 0.2, ease: easings.premium } 
   },
   whileTap: { 
-    scale: 0.995 
+    scale: 0.998,
+    transition: { duration: 0.08, ease: easings.premium } 
   }
 }
 
 // Button interaction
 export const buttonMotion = {
-  whileHover: { scale: 1.01 },
+  whileHover: { scale: 1.01, y: -1 },
   whileTap: { scale: 0.985 },
-  transition: { duration: 0.1 }
+  transition: { duration: 0.14, ease: easings.premium }
 }
 
 // Sidebar slide

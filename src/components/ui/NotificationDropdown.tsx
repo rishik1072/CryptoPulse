@@ -1,25 +1,30 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, TrendingUp } from 'lucide-react'
+import { useAuthStore } from '@/store/useAuthStore'
 
 const notifications = [
-  { id: 1, title: 'BTC crossed $102k', time: 'just now', type: 'success' },
-  { id: 2, title: 'ETH 24h volume spike', time: '14m ago', type: 'info' },
-  { id: 3, title: 'SOL added to watchlist', time: '2h ago', type: 'info' },
+  { id: 1, title: 'Portfolio synced', detail: 'Your balances are up to date.', time: 'just now' },
+  { id: 2, title: 'Watchlist refreshed', detail: 'New market signals are ready.', time: '14m ago' },
+  { id: 3, title: 'Alert threshold reached', detail: 'Your BTC alert is now active.', time: '2h ago' },
 ]
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
+  const { preferences } = useAuthStore()
+  const isDark = preferences.theme === 'dark'
 
   return (
     <div className="relative">
-      <button 
-        onClick={() => setOpen(!open)}
-        className="relative flex h-9 w-9 items-center justify-center rounded-2xl hover:bg-white/5 transition-all active:scale-[0.96]"
+      <motion.button
+        whileHover={{ scale: 1.04, y: -1 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={() => setOpen((value) => !value)}
+        className={`relative flex h-9 w-9 items-center justify-center rounded-2xl transition-all active:scale-[0.96] ${isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-100'}`}
       >
-        <Bell className="h-4 w-4" />
-        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-[#050816]" />
-      </button>
+        <Bell className={`h-4 w-4 ${isDark ? 'text-slate-200' : 'text-slate-600'}`} />
+        <div className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-violet-500 ring-2 ring-white" />
+      </motion.button>
 
       <AnimatePresence>
         {open && (
@@ -27,28 +32,31 @@ export function NotificationDropdown() {
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            className="absolute right-0 top-12 w-80 rounded-3xl glass border border-white/10 p-1 shadow-premium z-50"
+            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            className={`absolute right-0 top-12 z-50 w-80 rounded-[24px] border p-1 shadow-xl backdrop-blur-xl ${isDark ? 'border-slate-800 bg-slate-950/95' : 'border-slate-200 bg-white/95'}`}
           >
-            <div className="px-4 py-3 text-sm font-medium border-b border-white/10">Notifications</div>
-            
+            <div className={`border-b px-4 py-3 text-sm font-medium ${isDark ? 'border-slate-800 text-slate-100' : 'border-slate-200 text-slate-900'}`}>Notifications</div>
+
             <div className="py-1">
-              {notifications.map((n) => (
-                <div key={n.id} className="flex gap-3 px-4 py-[13px] hover:bg-white/5 rounded-2xl cursor-pointer">
-                  <div className="mt-0.5">
-                    <TrendingUp className="h-4 w-4 text-primary" />
+              {notifications.map((item) => (
+                <motion.div
+                  key={item.id}
+                  layout
+                  whileHover={{ x: 2, scale: 1.002 }}
+                  className={`flex gap-3 rounded-2xl px-4 py-[13px] ${isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-50'}`}
+                >
+                  <div className="mt-0.5 rounded-xl bg-violet-100 p-2 text-violet-700">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium">{n.title}</div>
-                    <div className="text-[11px] text-muted">{n.time}</div>
+                    <div className={`text-sm font-medium ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{item.title}</div>
+                    <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.detail} • {item.time}</div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-            
-            <div className="px-4 py-3 text-center text-xs text-muted border-t border-white/10">
-              View all activity
-            </div>
+
+            <div className={`border-t px-4 py-3 text-center text-xs ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>View all activity</div>
           </motion.div>
         )}
       </AnimatePresence>

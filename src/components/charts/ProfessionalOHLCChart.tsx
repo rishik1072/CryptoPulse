@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, memo } from 'react'
+import { motion } from 'framer-motion'
 import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts'
 import type { ISeriesApi, CandlestickData, Time } from 'lightweight-charts'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
@@ -129,7 +130,7 @@ export const ProfessionalOHLCChart = memo(({
   }, [livePrice, ohlcData])
 
   return (
-    <div className="relative">
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }} className="relative">
       <div className="flex flex-wrap gap-1 mb-4 px-1 text-sm">
         {Object.keys(TIMEFRAMES).map((tf) => (
           <button
@@ -145,6 +146,6 @@ export const ProfessionalOHLCChart = memo(({
       </div>
 
       <div ref={chartRef} className="w-full rounded-2xl overflow-hidden" style={{ height }} />
-    </div>
+    </motion.div>
   )
 })
