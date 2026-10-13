@@ -1,24 +1,31 @@
 import { create } from 'zustand'
-import { binanceWS } from '@/services/binanceWebSocket'
+import { binanceWS, type ConnectionStatus } from '@/services/binanceWebSocket'
 
 export type LivePrice = {
   symbol: string
   price: number
   change: number
   volume: number
+  baseVolume?: number
+  quoteVolume?: number
   timestamp: number
+  high24h?: number
+  low24h?: number
 }
+
+export type PriceStatus = 'live' | 'stale' | 'unavailable'
 
 interface LivePriceState {
   prices: Record<string, LivePrice>
-  connectionStatus: 'connecting' | 'connected' | 'reconnecting' | 'offline'
+  connectionStatus: ConnectionStatus
   lastUpdate: number | null
   latency: number
 
   subscribeToLivePrices: () => () => void
+  getPriceStatus: (symbol: string) => PriceStatus
 }
 
-export const useLivePriceStore = create<LivePriceState>((set) => ({
+export const useLivePriceStore = create<LivePriceState>((set, get) => ({
   prices: {},
   connectionStatus: 'offline',
   lastUpdate: null,
@@ -26,10 +33,16 @@ export const useLivePriceStore = create<LivePriceState>((set) => ({
 
   subscribeToLivePrices: () => {
     const unsubscribePriceUpdates = binanceWS.subscribe((update) => {
+      // Reject malformed or non-finite updates
+      if (!update.symbol || !Number.isFinite(update.price) || update.price <= 0) {
+        return
+      }
+
       set((state) => ({
         prices: {
           ...state.prices,
-          [update.symbol]: update,
+          [update.symbol.toUpperCase()]: update,
+          [update.symbol.toLowerCase()]: update,
         },
         lastUpdate: update.timestamp,
         connectionStatus: binanceWS.getStatus(),
@@ -48,5 +61,19 @@ export const useLivePriceStore = create<LivePriceState>((set) => ({
       unsubscribePriceUpdates()
       unsubscribeStatusUpdates()
     }
+  },
+
+  getPriceStatus: (symbol: string): PriceStatus => {
+    const upper = symbol.toUpperCase()
+    const item = get().prices[upper]
+    if (!item || !Number.isFinite(item.price) || item.price <= 0) {
+      return 'unavailable'
+    }
+
+    if (binanceWS.isPriceStale(item.timestamp)) {
+      return 'stale'
+    }
+
+    return 'live'
   },
 }))

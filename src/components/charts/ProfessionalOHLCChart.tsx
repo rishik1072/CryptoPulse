@@ -4,6 +4,8 @@ import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts'
 import type { ISeriesApi, CandlestickData, Time } from 'lightweight-charts'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
 import { useOHLCData } from '@/services/historical'
+import { ApiError } from '@/services/coingecko'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
 interface ProfessionalOHLCChartProps {
   coinId: string
@@ -37,7 +39,7 @@ export const ProfessionalOHLCChart = memo(({
   const livePrice = prices[symbol]
 
   const days = TIMEFRAMES[timeframe] || 7
-  const { data: ohlcData } = useOHLCData(coinId, days)
+  const { data: ohlcData, isLoading, isError, error } = useOHLCData(coinId, days)
 
   // Initialize chart
   useEffect(() => {
@@ -145,7 +147,44 @@ export const ProfessionalOHLCChart = memo(({
         ))}
       </div>
 
-      <div ref={chartRef} className="w-full rounded-2xl overflow-hidden" style={{ height }} />
+      <div className="relative w-full rounded-2xl overflow-hidden" style={{ height }}>
+        <div ref={chartRef} className="h-full w-full" />
+
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/70 backdrop-blur-xs text-slate-300">
+            <Loader2 className="h-7 w-7 animate-spin text-violet-400 mb-2" />
+            <div className="text-sm font-medium">Loading candlestick data…</div>
+          </div>
+        )}
+
+        {isError && (!ohlcData || ohlcData.length === 0) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-xs p-6 text-center text-slate-300">
+            <AlertCircle className="h-8 w-8 text-amber-400 mb-2" />
+            <div className="text-sm font-semibold text-white">Historical OHLC data temporarily unavailable</div>
+            <div className="text-xs text-slate-400 max-w-sm mt-1">
+              {error instanceof ApiError && error.isRateLimited
+                ? 'CoinGecko API rate limit reached (HTTP 429). The chart will auto-recover once cooldown expires.'
+                : error?.message || 'Failed to fetch historical candlestick prices.'}
+            </div>
+            <div className="text-[11px] text-emerald-400 mt-3 font-mono">
+              Live Binance price updates continue to stream in real-time
+            </div>
+          </div>
+        )}
+
+        {isError && ohlcData && ohlcData.length > 0 && (
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300 backdrop-blur-md">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+            <span>Cached historical data (stale)</span>
+          </div>
+        )}
+
+        {!isLoading && !isError && ohlcData && ohlcData.length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/60 p-6 text-center text-slate-400">
+            <div className="text-sm">No candlestick records available for {timeframe} timeframe</div>
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 })

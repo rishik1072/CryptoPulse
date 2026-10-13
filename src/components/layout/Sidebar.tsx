@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useUser } from '@clerk/clerk-react'
 import {
   BellRing,
   ChevronRight,
@@ -15,12 +14,15 @@ import {
   TrendingUp,
   Wallet,
   ArrowLeft,
+  Newspaper,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/useUIStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import { usePortfolioStore } from '@/store/usePortfolioStore'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
+import { computePortfolioValuation } from '@/services/priceResolver'
+import { useMarketData, useCoinsMarketData, type CoinMarketData } from '@/services/coingecko'
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown'
 import { ProfileMenu } from '@/components/ui/ProfileMenu'
 
@@ -31,6 +33,7 @@ const navItems = [
   { to: '/profile', label: 'Profile', icon: Sparkles, hint: 'Account view' },
   { to: '/watchlist', label: 'Watchlist', icon: Star, hint: 'Your ideas' },
   { to: '/alerts', label: 'Alerts', icon: BellRing, hint: 'Signal alerts' },
+  { to: '/news', label: 'News', icon: Newspaper, hint: 'Market intel' },
   { to: '/settings', label: 'Settings', icon: Settings, hint: 'Preferences' },
 ]
 
@@ -48,33 +51,42 @@ function formatCurrency(value: number) {
   }).format(value)
 }
 
-const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined
-const clerkEnabled = Boolean(
-  clerkPublishableKey &&
-    clerkPublishableKey !== 'your_clerk_publishable_key_here' &&
-    clerkPublishableKey.startsWith('pk_live_')
-)
-
 interface SidebarInnerProps {
   profileName: string
   profileEmail: string
-  avatarUrl?: string
 }
 
-function SidebarInner({ profileName, profileEmail, avatarUrl }: SidebarInnerProps) {
+function SidebarInner({ profileName, profileEmail }: SidebarInnerProps) {
   const { sidebarOpen, toggleSidebar, closeSidebar } = useUIStore()
   const { preferences, updatePreferences } = useAuthStore()
   const { holdings } = usePortfolioStore()
-  const { prices } = useLivePriceStore()
+  const { prices, connectionStatus } = useLivePriceStore()
   const [workspace, setWorkspace] = useState<'personal' | 'research' | 'institutional'>('personal')
   const isDark = preferences.theme === 'dark'
 
+  const holdingCoinIds = useMemo(() => holdings.map((h) => h.coinId).filter(Boolean), [holdings])
+  const { data: topMarkets = [] } = useMarketData(50)
+  const { data: specificMarkets = [] } = useCoinsMarketData(holdingCoinIds, topMarkets)
+
+  const marketDataMap = useMemo(() => {
+    const map: Record<string, CoinMarketData> = {}
+    for (const coin of topMarkets) {
+      map[coin.id.toLowerCase()] = coin
+      map[coin.symbol.toLowerCase()] = coin
+      map[coin.symbol.toUpperCase()] = coin
+    }
+    for (const coin of specificMarkets) {
+      map[coin.id.toLowerCase()] = coin
+      map[coin.symbol.toLowerCase()] = coin
+      map[coin.symbol.toUpperCase()] = coin
+    }
+    return map
+  }, [topMarkets, specificMarkets])
+
   const totalBalance = useMemo(() => {
-    return holdings.reduce((sum, holding) => {
-      const price = prices[holding.symbol]?.price ?? holding.avgBuyPrice
-      return sum + holding.quantity * price
-    }, 0)
-  }, [holdings, prices])
+    const { metrics } = computePortfolioValuation(holdings, prices, marketDataMap, connectionStatus)
+    return metrics.totalValue
+  }, [holdings, prices, marketDataMap, connectionStatus])
 
   const initials = profileName
     .split(' ')
@@ -269,27 +281,10 @@ function SidebarInner({ profileName, profileEmail, avatarUrl }: SidebarInnerProp
   )
 }
 
-function SidebarClerk() {
-  const { user: clerkUser, isLoaded, isSignedIn } = useUser()
-  const profileName = isLoaded ? clerkUser?.fullName || clerkUser?.firstName || (isSignedIn ? 'Investor' : 'Guest') : 'Loading…'
-  const profileEmail = isLoaded ? clerkUser?.primaryEmailAddress?.emailAddress || (isSignedIn ? 'Verified account' : 'Sign in to sync') : 'Checking session…'
-  const avatarUrl = clerkUser?.imageUrl
-
-  return <SidebarInner profileName={profileName} profileEmail={profileEmail} avatarUrl={avatarUrl} />
-}
-
-function SidebarLocal() {
+export function Sidebar() {
   const { user } = useAuthStore()
   const profileName = user?.name || 'Guest'
   const profileEmail = user?.email || 'Sign in to sync'
-  const avatarUrl = user?.avatarUrl
 
-  return <SidebarInner profileName={profileName} profileEmail={profileEmail} avatarUrl={avatarUrl} />
-}
-
-export function Sidebar() {
-  if (clerkEnabled) {
-    return <SidebarClerk />
-  }
-  return <SidebarLocal />
+  return <SidebarInner profileName={profileName} profileEmail={profileEmail} />
 }

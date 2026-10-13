@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
@@ -25,6 +25,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { useCryptoNews } from '@/services/news'
 import { TradeSimulatorModal } from '@/components/portfolio/TradeSimulatorModal'
+import { ApiError, apiRetryConfig, fetchJsonSafely } from '@/services/coingecko'
+import { resolveAssetPrice, resolveMarketVolume } from '@/services/priceResolver'
 
 interface CoinDetail {
   id: string
@@ -79,7 +81,7 @@ const formatValue = (value: number, prefix = '', suffix = '') => {
 
 export default function AssetDetail() {
   const { coinId } = useParams<{ coinId: string }>()
-  const { prices: livePrices } = useLivePriceStore()
+  const { prices: livePrices, connectionStatus } = useLivePriceStore()
   const { items: watchlistItems, addToWatchlist, removeFromWatchlist } = useWatchlistStore()
   const [isTradeOpen, setIsTradeOpen] = useState(false)
   const [tradeMode, setTradeMode] = useState<'buy' | 'sell'>('buy')
@@ -101,42 +103,101 @@ export default function AssetDetail() {
   const { data: coin, isLoading, error } = useQuery<CoinDetail>({
     queryKey: ['coin-detail', coinId],
     queryFn: () =>
-      fetch(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false`).then((res) => res.json()),
+      fetchJsonSafely<CoinDetail>(
+        `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId!)}?localization=false&tickers=false&community_data=false&developer_data=false`,
+        `coin details for ${coinId}`
+      ),
     enabled: !!coinId,
     staleTime: 1000 * 60 * 5,
+    ...apiRetryConfig,
   })
 
   const { data: marketChart } = useQuery<MarketChartData>({
     queryKey: ['coin-market-chart', coinId],
     queryFn: () =>
-      fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=30&interval=daily`).then((res) => res.json()),
+      fetchJsonSafely<MarketChartData>(
+        `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId!)}/market_chart?vs_currency=usd&days=30&interval=daily`,
+        `market chart for ${coinId}`
+      ),
     enabled: !!coinId,
     staleTime: 1000 * 60 * 10,
+    ...apiRetryConfig,
   })
 
   const { data: statusUpdates } = useQuery<{ status_updates?: CoinStatusUpdate[] }>({
     queryKey: ['coin-status-updates', coinId],
     queryFn: () =>
-      fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/status_updates?per_page=5`).then((res) => res.json()),
+      fetchJsonSafely<{ status_updates?: CoinStatusUpdate[] }>(
+        `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId!)}/status_updates?per_page=5`,
+        `status updates for ${coinId}`
+      ),
     enabled: !!coinId,
     staleTime: 1000 * 60 * 10,
+    ...apiRetryConfig,
   })
 
   const { data: tickerData } = useQuery<{ tickers?: CoinTicker[] }>({
     queryKey: ['coin-tickers', coinId],
     queryFn: () =>
-      fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/tickers?limit=5`).then((res) => res.json()),
+      fetchJsonSafely<{ tickers?: CoinTicker[] }>(
+        `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId!)}/tickers?limit=5`,
+        `tickers for ${coinId}`
+      ),
     enabled: !!coinId,
     staleTime: 1000 * 60 * 5,
+    ...apiRetryConfig,
   })
 
   const { data: news } = useCryptoNews(4)
 
+  const resolved = useMemo(() => {
+    if (!coin) {
+      return {
+        price: null,
+        change24h: null,
+        source: 'unavailable' as const,
+        isLive: false,
+        isStale: false,
+        isUnavailable: true,
+      }
+    }
+    const cgMap = coin.market_data?.current_price?.usd
+      ? {
+          [coin.id.toLowerCase()]: {
+            id: coin.id,
+            symbol: coin.symbol,
+            name: coin.name,
+            current_price: coin.market_data.current_price.usd,
+            price_change_percentage_24h: coin.market_data.price_change_percentage_24h ?? 0,
+            market_cap: coin.market_data.market_cap?.usd ?? 0,
+            total_volume: coin.market_data.total_volume?.usd ?? 0,
+            image: coin.image?.large ?? '',
+          },
+        }
+      : undefined
+
+    return resolveAssetPrice(
+      { symbol: coin.symbol, coinId: coin.id },
+      livePrices,
+      cgMap,
+      connectionStatus
+    )
+  }, [coin, livePrices, connectionStatus])
+
   const livePrice = livePrices[coin?.symbol?.toUpperCase() || '']
-  const currentPrice = livePrice?.price ?? coin?.market_data?.current_price?.usd ?? 0
-  const change24h = livePrice?.change ?? coin?.market_data?.price_change_percentage_24h ?? 0
+  const currentPrice = resolved.price
+  const change24h = resolved.change24h ?? 0
   const marketCap = coin?.market_data?.market_cap?.usd ?? 0
-  const volume = coin?.market_data?.total_volume?.usd ?? livePrice?.volume ?? 0
+
+  const marketVolume = useMemo(() => {
+    return resolveMarketVolume(
+      coin?.market_data?.total_volume?.usd,
+      livePrice?.quoteVolume,
+      livePrice?.baseVolume
+    )
+  }, [coin, livePrice])
+
+  const volume = marketVolume.volume
   const supply = coin?.market_data?.circulating_supply ?? 0
   const rank = coin?.market_data?.market_cap_rank ?? 0
   const ath = coin?.market_data?.ath?.usd ?? 0
@@ -197,22 +258,35 @@ export default function AssetDetail() {
     )
   }
 
-  if (error || !coin) {
+  if (error || !coin || !coin.symbol) {
+    const isRateLimited = error instanceof ApiError && error.isRateLimited
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <GlassCard className="max-w-md text-center">
-          <h2 className="text-2xl font-semibold">Unable to load asset</h2>
-          <p className="mt-2 text-sm text-slate-400">Please try again later.</p>
+      <div className="flex h-[60vh] items-center justify-center p-4">
+        <GlassCard className="max-w-md text-center p-8">
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
+            {isRateLimited ? 'Rate limit exceeded' : 'Unable to load asset'}
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            {isRateLimited
+              ? 'CoinGecko request quota reached (HTTP 429). Live price stream remains active, but historical metrics need a short cooldown.'
+              : error?.message || 'The requested asset data could not be retrieved. Please try again later.'}
+          </p>
+          <Link
+            to="/markets"
+            className="mt-6 inline-block rounded-2xl bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950"
+          >
+            Back to Markets
+          </Link>
         </GlassCard>
       </div>
     )
   }
 
   const stats = [
-    { label: 'Volume', value: volume, prefix: '$' },
-    { label: 'Market Cap', value: marketCap, prefix: '$' },
-    { label: 'Rank', value: rank || 1, prefix: '#' },
-    { label: 'Supply', value: supply, suffix: ` ${coin.symbol.toUpperCase()}` },
+    { label: 'Volume', value: marketVolume.volume, prefix: marketVolume.unit === 'USD' ? '$' : '', decimals: 0 },
+    { label: 'Market Cap', value: marketCap, prefix: '$', decimals: 0 },
+    { label: 'Rank', value: rank || 1, prefix: '#', decimals: 0 },
+    { label: 'Supply', value: supply, suffix: ` ${coin.symbol.toUpperCase()}`, decimals: 0 },
   ]
 
   return (
@@ -232,12 +306,44 @@ export default function AssetDetail() {
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <div className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
-                      ${currentPrice.toLocaleString(undefined, { maximumFractionDigits: currentPrice > 1 ? 2 : 6 })}
+                      {currentPrice !== null ? (
+                        `$${currentPrice.toLocaleString(undefined, {
+                          minimumFractionDigits: currentPrice >= 1 ? 2 : 4,
+                          maximumFractionDigits: currentPrice >= 1 ? 2 : 6,
+                        })}`
+                      ) : (
+                        <span className="text-slate-400 font-normal">—</span>
+                      )}
                     </div>
-                    <div className={`flex items-center gap-1 text-lg font-medium ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {isPositive ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
-                      {change24h.toFixed(2)}%
-                    </div>
+                    {resolved.source === 'binance-live' && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Live
+                      </span>
+                    )}
+                    {resolved.source === 'binance-stale' && (
+                      <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
+                        Stale
+                      </span>
+                    )}
+                    {resolved.source === 'coingecko' && (
+                      <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-xs font-medium text-blue-400">
+                        CoinGecko
+                      </span>
+                    )}
+                    {resolved.source === 'unavailable' && (
+                      <span className="inline-flex items-center rounded-full bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 text-xs font-medium text-slate-400">
+                        Price Unavailable
+                      </span>
+                    )}
+                    {resolved.change24h !== null ? (
+                      <div className={`flex items-center gap-1 text-lg font-medium ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {isPositive ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                        {change24h.toFixed(2)}%
+                      </div>
+                    ) : (
+                      <div className="text-sm text-slate-400 font-normal">—</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -273,9 +379,12 @@ export default function AssetDetail() {
                 <div key={index} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{stat.label}</div>
                   <div className="mt-2 text-xl font-semibold tracking-tight text-white">
-                    {stat.prefix}
-                    <AnimatedCounter value={Math.floor(stat.value)} />
-                    {stat.suffix}
+                    <AnimatedCounter
+                      value={stat.value}
+                      prefix={stat.prefix}
+                      suffix={stat.suffix}
+                      decimals={stat.decimals}
+                    />
                   </div>
                 </div>
               ))}
@@ -400,17 +509,20 @@ export default function AssetDetail() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              { label: '30D change', value: historical?.change30d ?? 0, suffix: '%' },
-              { label: 'ATH', value: ath, prefix: '$' },
-              { label: 'ATL', value: atl, prefix: '$' },
-              { label: 'Current vs ATH', value: ath ? ((currentPrice / ath) * 100 - 100) : 0, suffix: '%' },
+              { label: '30D change', value: historical?.change30d ?? 0, suffix: '%', decimals: 2 },
+              { label: 'ATH', value: ath, prefix: '$', decimals: ath < 1 ? 4 : 2 },
+              { label: 'ATL', value: atl, prefix: '$', decimals: atl < 1 ? 4 : 2 },
+              { label: 'Current vs ATH', value: ath && currentPrice ? ((currentPrice / ath) * 100 - 100) : 0, suffix: '%', decimals: 2 },
             ].map((item, index) => (
               <div key={index} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{item.label}</div>
                 <div className="mt-2 text-xl font-semibold text-white">
-                  {item.prefix}
-                  <AnimatedCounter value={Number(item.value.toFixed(2))} />
-                  {item.suffix}
+                  <AnimatedCounter
+                    value={item.value}
+                    prefix={item.prefix}
+                    suffix={item.suffix}
+                    decimals={item.decimals}
+                  />
                 </div>
               </div>
             ))}
@@ -458,7 +570,7 @@ export default function AssetDetail() {
         symbol={coin.symbol}
         name={coin.name}
         image={coin.image.large}
-        price={currentPrice}
+        price={currentPrice ?? 0}
         initialMode={tradeMode}
       />
     </div>

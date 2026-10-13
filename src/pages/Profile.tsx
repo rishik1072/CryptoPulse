@@ -6,6 +6,8 @@ import { usePortfolioStore } from '@/store/usePortfolioStore'
 import { useWatchlistStore } from '@/store/useWatchlistStore'
 import { useAlertStore } from '@/store/useAlertStore'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
+import { computePortfolioValuation } from '@/services/priceResolver'
+import { useMarketData, useCoinsMarketData, type CoinMarketData } from '@/services/coingecko'
 import { GlassCard } from '@/components/ui/GlassCard'
 
 export default function ProfilePage() {
@@ -13,15 +15,36 @@ export default function ProfilePage() {
   const { holdings } = usePortfolioStore()
   const { items: watchlistItems } = useWatchlistStore()
   const { alerts } = useAlertStore()
-  const { prices: livePrices } = useLivePriceStore()
+  const { prices: livePrices, connectionStatus } = useLivePriceStore()
 
-  const portfolioValue = useMemo(() => {
-    return holdings.reduce((sum, holding) => {
-      const live = livePrices[holding.symbol]
-      const currentPrice = live?.price ?? holding.avgBuyPrice
-      return sum + holding.quantity * currentPrice
-    }, 0)
-  }, [holdings, livePrices])
+  const holdingCoinIds = useMemo(() => holdings.map((h) => h.coinId).filter(Boolean), [holdings])
+  const { data: topMarkets = [] } = useMarketData(50)
+  const { data: specificMarkets = [] } = useCoinsMarketData(holdingCoinIds, topMarkets)
+
+  const marketDataMap = useMemo(() => {
+    const map: Record<string, CoinMarketData> = {}
+    for (const coin of topMarkets) {
+      map[coin.id.toLowerCase()] = coin
+      map[coin.symbol.toLowerCase()] = coin
+      map[coin.symbol.toUpperCase()] = coin
+    }
+    for (const coin of specificMarkets) {
+      map[coin.id.toLowerCase()] = coin
+      map[coin.symbol.toLowerCase()] = coin
+      map[coin.symbol.toUpperCase()] = coin
+    }
+    return map
+  }, [topMarkets, specificMarkets])
+
+  const portfolioSummary = useMemo(() => {
+    const { metrics } = computePortfolioValuation(holdings, livePrices, marketDataMap, connectionStatus)
+    return {
+      total: metrics.totalValue,
+      pricedCount: metrics.valuedCount,
+      isPartial: metrics.isIncomplete,
+      hasPriced: metrics.valuedCount > 0,
+    }
+  }, [holdings, livePrices, marketDataMap, connectionStatus])
 
   if (!user) {
     return (
@@ -75,9 +98,16 @@ export default function ProfilePage() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Portfolio value</div>
+              <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+                <span>Portfolio value</span>
+                {portfolioSummary.isPartial && (
+                  <span className="rounded bg-amber-500/10 px-1 text-[9px] text-amber-500">Partial</span>
+                )}
+              </div>
               <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                ${portfolioValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                {portfolioSummary.hasPriced
+                  ? `$${portfolioSummary.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : '—'}
               </div>
             </div>
             <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">

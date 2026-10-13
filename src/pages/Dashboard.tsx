@@ -10,23 +10,24 @@ import {
   Eye,
   Newspaper,
   Plus,
-  Sparkles,
   Star,
   TrendingDown,
   TrendingUp,
   Wallet,
 } from 'lucide-react'
-import { useGlobalData, useMarketData, useTrendingCoins } from '@/services/coingecko'
+import { useGlobalData, useMarketData, useTrendingCoins, useCoinsMarketData, type CoinMarketData } from '@/services/coingecko'
 import { useCryptoNews } from '@/services/news'
 import { useFearGreedIndex } from '@/services/fearGreed'
 import { usePortfolioStore } from '@/store/usePortfolioStore'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
 import { useWatchlistStore } from '@/store/useWatchlistStore'
 import { useAuthStore } from '@/store/useAuthStore'
+import { computePortfolioValuation, resolveAssetPrice } from '@/services/priceResolver'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PriceChange } from '@/components/ui/PriceChange'
+import { LivePriceTracker } from '@/components/dashboard/LivePriceTracker'
 function SectionReveal({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div
@@ -44,17 +45,18 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: value >= 100000 ? 0 : 2,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
 }
 
 export default function Dashboard() {
   const { holdings } = usePortfolioStore()
-  const { prices: livePrices } = useLivePriceStore()
-  const { items: watchlistItems } = useWatchlistStore()
+  const { prices: livePrices, connectionStatus } = useLivePriceStore()
   const { user } = useAuthStore()
+  const { items: watchlistItems } = useWatchlistStore()
   const { data: globalData, isLoading: globalLoading } = useGlobalData()
-  const { data: marketData = [] } = useMarketData(8)
+  const { data: marketData = [] } = useMarketData(50)
   const { data: trendingData } = useTrendingCoins()
   const { data: fearGreedData } = useFearGreedIndex()
   const { data: news = [] } = useCryptoNews(5)
@@ -63,41 +65,43 @@ export default function Dashboard() {
 
   const global = globalData?.data
 
-  const portfolioRows = useMemo(() => {
-    return holdings.map((holding) => {
-      const live = livePrices[holding.symbol]
-      const currentPrice = live?.price ?? holding.avgBuyPrice
-      const currentValue = holding.quantity * currentPrice
-      const costBasis = holding.quantity * holding.avgBuyPrice
-      const profit = currentValue - costBasis
-      const roi = costBasis > 0 ? (profit / costBasis) * 100 : 0
-      return { ...holding, currentPrice, currentValue, profit, roi, change24h: live?.change ?? 0 }
-    })
-  }, [holdings, livePrices])
+  const holdingCoinIds = useMemo(() => holdings.map((h) => h.coinId).filter(Boolean), [holdings])
+  const { data: specificMarkets = [] } = useCoinsMarketData(holdingCoinIds, marketData)
 
-  const portfolioMetrics = useMemo(() => {
-    const totalValue = portfolioRows.reduce((sum, item) => sum + item.currentValue, 0)
-    const totalCost = portfolioRows.reduce((sum, item) => sum + item.quantity * item.avgBuyPrice, 0)
-    const totalProfit = totalValue - totalCost
-    const totalRoi = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
-    const bestPerformer = [...portfolioRows].sort((a, b) => b.roi - a.roi)[0]
-    const worstPerformer = [...portfolioRows].sort((a, b) => a.roi - b.roi)[0]
+  const marketDataMap = useMemo(() => {
+    const map: Record<string, CoinMarketData> = {}
+    for (const coin of marketData) {
+      map[coin.id.toLowerCase()] = coin
+      map[coin.symbol.toLowerCase()] = coin
+      map[coin.symbol.toUpperCase()] = coin
+    }
+    for (const coin of specificMarkets) {
+      map[coin.id.toLowerCase()] = coin
+      map[coin.symbol.toLowerCase()] = coin
+      map[coin.symbol.toUpperCase()] = coin
+    }
+    return map
+  }, [marketData, specificMarkets])
 
-    return { totalValue, totalProfit, totalRoi, bestPerformer, worstPerformer }
-  }, [portfolioRows])
+  const { valuations: portfolioRows, metrics: portfolioMetrics } = useMemo(
+    () => computePortfolioValuation(holdings, livePrices, marketDataMap, connectionStatus),
+    [holdings, livePrices, marketDataMap, connectionStatus]
+  )
 
   const watchlistRows = useMemo(() => {
     return watchlistItems
       .slice(0, 4)
       .map((item) => {
-        const live = livePrices[item.symbol]
+        const resolved = resolveAssetPrice(item, livePrices, marketDataMap, connectionStatus)
         return {
           ...item,
-          price: live?.price ?? 0,
-          change: live?.change ?? 0,
+          price: resolved.price,
+          change: resolved.change24h,
+          source: resolved.source,
+          isUnavailable: resolved.isUnavailable,
         }
       })
-  }, [watchlistItems, livePrices])
+  }, [watchlistItems, livePrices, marketDataMap, connectionStatus])
 
   const topMovers = useMemo(() => {
     const gainers = [...marketData].filter((coin) => coin.price_change_percentage_24h > 0).sort((a, b) => b.price_change_percentage_24h - a.price_change_percentage_24h).slice(0, 4)
@@ -105,26 +109,31 @@ export default function Dashboard() {
     return { gainers, losers }
   }, [marketData])
 
-  const recentAssets = useMemo(() => {
-    if (typeof window === 'undefined') return marketData.slice(0, 4)
-    const raw = window.localStorage.getItem('cryptopulse-recent-assets')
-    if (!raw) return marketData.slice(0, 4)
-
+  // Get recent assets from localStorage outside of useMemo to avoid side effects
+  const getRecentAssetIds = () => {
+    if (typeof window === 'undefined') return []
     try {
-      const ids = JSON.parse(raw) as string[]
-      const matched = marketData.filter((coin) => ids.includes(coin.id))
-      return matched.length ? matched.slice(0, 4) : marketData.slice(0, 4)
+      const raw = window.localStorage.getItem('cryptopulse-recent-assets')
+      return raw ? (JSON.parse(raw) as string[]) : []
     } catch {
-      return marketData.slice(0, 4)
+      return []
     }
+  }
+
+  const recentAssets = useMemo(() => {
+    const recentIds = getRecentAssetIds()
+    if (recentIds.length === 0) return marketData.slice(0, 4)
+    
+    const matched = marketData.filter((coin) => recentIds.includes(coin.id))
+    return matched.length ? matched.slice(0, 4) : marketData.slice(0, 4)
   }, [marketData])
 
-  const greeting = () => {
+  const greeting = useMemo(() => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Good morning'
     if (hour < 18) return 'Good afternoon'
     return 'Good evening'
-  }
+  }, [])
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -136,7 +145,7 @@ export default function Dashboard() {
                 Live market &bull; {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
               <h1 className="text-balance text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl">
-                {greeting()}, {firstName}.
+                {greeting}, {firstName}.
               </h1>
               <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
                 Track momentum, review movers, and act on opportunities from one calm workspace.
@@ -147,7 +156,7 @@ export default function Dashboard() {
               <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Market pulse</div>
               <div className="mt-3 flex items-end justify-between gap-3">
                 <div>
-                  <div className="text-3xl font-semibold tracking-[-0.03em] text-slate-900">{globalLoading ? <Skeleton className="h-8 w-24" /> : <AnimatedCounter value={global?.market_cap_change_percentage_24h_usd ?? 0} suffix="%" />}</div>
+                  <div className="text-3xl font-semibold tracking-[-0.03em] text-slate-900">{globalLoading ? <Skeleton className="h-8 w-24" /> : <AnimatedCounter value={global?.market_cap_change_percentage_24h_usd ?? 0} suffix="%" decimals={2} />}</div>
                   <div className="mt-1 text-sm text-emerald-600">{globalLoading ? 'Updating…' : '24h market shift'}</div>
                 </div>
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
@@ -159,14 +168,34 @@ export default function Dashboard() {
         </GlassCard>
       </SectionReveal>
 
+      {/* Real-time Binance WebSocket Ticker Bar */}
+      <SectionReveal delay={0.04}>
+        <LivePriceTracker />
+      </SectionReveal>
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <SectionReveal delay={0.07}>
           <GlassCard className="card-sheen">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-slate-500">Portfolio Summary</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-slate-500">Portfolio Summary</div>
+                  {portfolioMetrics.isIncomplete && (
+                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      Partial
+                    </span>
+                  )}
+                </div>
                 <div className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
-                  {globalLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(portfolioMetrics.totalValue)}
+                  {globalLoading ? (
+                    <Skeleton className="h-8 w-28" />
+                  ) : portfolioMetrics.valuedCount > 0 ? (
+                    formatCurrency(portfolioMetrics.totalValue)
+                  ) : holdings.length === 0 ? (
+                    '$0.00'
+                  ) : (
+                    <span className="text-slate-400 text-2xl font-normal">—</span>
+                  )}
                 </div>
               </div>
               <div className="rounded-2xl bg-violet-50 p-2 text-violet-700">
@@ -175,7 +204,9 @@ export default function Dashboard() {
             </div>
             <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
               <Activity className="h-4 w-4" />
-              {portfolioRows.length ? `${portfolioRows.length} active positions` : 'No positions yet'}
+              {portfolioRows.length
+                ? `${portfolioMetrics.valuedCount} of ${portfolioRows.length} positions priced`
+                : 'No positions yet'}
             </div>
           </GlassCard>
         </SectionReveal>
@@ -184,9 +215,24 @@ export default function Dashboard() {
           <GlassCard className="card-sheen">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-slate-500">Today&apos;s Profit / Loss</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-slate-500">Today&apos;s Profit / Loss</div>
+                  {portfolioMetrics.isIncomplete && (
+                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      Priced Only
+                    </span>
+                  )}
+                </div>
                 <div className={`mt-2 text-3xl font-semibold tracking-[-0.03em] ${portfolioMetrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {globalLoading ? <Skeleton className="h-8 w-28" /> : `${portfolioMetrics.totalProfit >= 0 ? '+' : ''}${formatCurrency(Math.abs(portfolioMetrics.totalProfit))}`}
+                  {globalLoading ? (
+                    <Skeleton className="h-8 w-28" />
+                  ) : portfolioMetrics.valuedCount > 0 ? (
+                    `${portfolioMetrics.totalProfit >= 0 ? '+' : ''}${formatCurrency(portfolioMetrics.totalProfit)}`
+                  ) : holdings.length === 0 ? (
+                    '$0.00'
+                  ) : (
+                    <span className="text-slate-400 text-2xl font-normal">—</span>
+                  )}
                 </div>
               </div>
               <div className={`rounded-2xl p-2 ${portfolioMetrics.totalProfit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
@@ -194,7 +240,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="mt-4 text-sm text-slate-500">
-              {portfolioMetrics.totalRoi >= 0 ? '+' : ''}{portfolioMetrics.totalRoi.toFixed(1)}% ROI across holdings
+              {portfolioMetrics.valuedCount > 0
+                ? `${portfolioMetrics.totalRoi >= 0 ? '+' : ''}${portfolioMetrics.totalRoi.toFixed(1)}% ROI across priced holdings`
+                : 'Awaiting verified market prices'}
             </div>
           </GlassCard>
         </SectionReveal>
@@ -233,15 +281,15 @@ export default function Dashboard() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: 'Total Market Cap', value: global?.total_market_cap.usd ?? 0, prefix: '$', suffix: 'T', color: 'text-slate-900' },
-              { label: '24h Volume', value: (global?.total_volume.usd ?? 0) / 1e9, prefix: '$', suffix: 'B', color: 'text-slate-900' },
-              { label: 'Active Coins', value: global?.active_cryptocurrencies ?? 0, color: 'text-slate-900' },
-              { label: 'BTC Dominance', value: global?.market_cap_percentage?.btc ?? 0, suffix: '%', color: 'text-violet-700' },
+              { label: 'Total Market Cap', value: (global?.total_market_cap?.usd ?? 0) / 1e12, prefix: '$', suffix: 'T', decimals: 2, color: 'text-slate-900' },
+              { label: '24h Volume', value: (global?.total_volume?.usd ?? 0) / 1e9, prefix: '$', suffix: 'B', decimals: 2, color: 'text-slate-900' },
+              { label: 'Active Coins', value: global?.active_cryptocurrencies ?? 0, decimals: 0, color: 'text-slate-900' },
+              { label: 'BTC Dominance', value: global?.market_cap_percentage?.btc ?? 0, suffix: '%', decimals: 1, color: 'text-violet-700' },
             ].map((item) => (
               <div key={item.label} className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
                 <div className="text-sm text-slate-500">{item.label}</div>
                 <div className={`mt-3 text-2xl font-semibold tracking-[-0.03em] ${item.color}`}>
-                  {globalLoading ? <Skeleton className="h-8 w-24" /> : <><AnimatedCounter value={item.value} prefix={item.prefix} suffix={item.suffix} /></>}
+                  {globalLoading ? <Skeleton className="h-8 w-24" /> : <><AnimatedCounter value={item.value} prefix={item.prefix} suffix={item.suffix} decimals={item.decimals} /></>}
                 </div>
               </div>
             ))}
@@ -275,8 +323,18 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono text-sm font-medium text-slate-900">{formatCurrency(item.price)}</div>
-                    <div className={`text-sm ${item.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{item.change >= 0 ? '+' : ''}{item.change.toFixed(1)}%</div>
+                    <div className="font-mono text-sm font-medium text-slate-900">
+                      {item.price !== null ? formatCurrency(item.price) : <span className="text-slate-400 font-normal">—</span>}
+                    </div>
+                    <div className="text-sm">
+                      {item.change !== null ? (
+                        <span className={item.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}>
+                          {item.change >= 0 ? '+' : ''}{item.change.toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-normal">—</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )) : (

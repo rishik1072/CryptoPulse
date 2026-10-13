@@ -16,7 +16,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { toast } from 'sonner'
 
 const AVATAR_PRESETS = [
-  'https://api.dicebear.com/7.x/pixel-art/svg?seed=rishi',
+  'https://api.dicebear.com/7.x/pixel-art/svg?seed=trader',
   'https://api.dicebear.com/7.x/pixel-art/svg?seed=groww',
   'https://api.dicebear.com/7.x/identicon/svg?seed=bitcoin',
   'https://api.dicebear.com/7.x/identicon/svg?seed=ethereum',
@@ -72,7 +72,7 @@ export default function Settings() {
     toast.success('Profile details saved successfully!')
   }
 
-  const handlePasswordSave = () => {
+  const handlePasswordSave = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('All password fields are required')
       return
@@ -85,7 +85,7 @@ export default function Settings() {
       toast.error('New passwords do not match')
       return
     }
-    const ok = changePassword(currentPassword, newPassword)
+    const ok = await changePassword(currentPassword, newPassword)
     if (ok) {
       toast.success('Password updated successfully!')
       setCurrentPassword('')
@@ -129,14 +129,24 @@ export default function Settings() {
     toast.success('Your account data has been successfully exported.')
   }
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm(
       'WARNING: This will permanently delete your account, portfolio holdings, watchlist, and active price alerts. This action CANNOT be undone. Are you sure you want to proceed?'
     )
-    if (confirmDelete) {
-      deleteAccount()
-      toast.success('Your account has been deleted.')
-      window.location.assign('/sign-in')
+    if (!confirmDelete) return
+
+    try {
+      await deleteAccount()
+      const currentError = useAuthStore.getState().error
+      if (currentError) {
+        toast.error(currentError)
+      } else {
+        toast.success('Your account has been deleted.')
+        window.location.assign('/sign-in')
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete account'
+      toast.error(msg)
     }
   }
 

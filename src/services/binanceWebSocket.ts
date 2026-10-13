@@ -1,12 +1,16 @@
-type PriceUpdate = {
+export type PriceUpdate = {
   symbol: string
   price: number
   change: number
   volume: number
+  baseVolume?: number
+  quoteVolume?: number
   timestamp: number
+  high24h?: number
+  low24h?: number
 }
 
-type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'offline'
+export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'offline'
 
 type Subscriber = (update: PriceUpdate) => void
 type StatusSubscriber = (status: ConnectionStatus) => void
@@ -22,10 +26,12 @@ class BinanceWebSocketService {
   private status: ConnectionStatus = 'offline'
   private lastPing = 0
   private latency = 0
+  private lastMessageTime = 0
 
   private readonly SYMBOLS = ['btcusdt', 'ethusdt', 'solusdt', 'xrpusdt', 'dogeusdt', 'bnbusdt']
   private readonly BASE_URL = 'wss://stream.binance.com:443/stream?streams='
   private readonly MAX_RECONNECT_ATTEMPTS = 10
+  private readonly STALE_DATA_THRESHOLD_MS = 60000 // 60 seconds
 
   private constructor() {}
 
@@ -53,6 +59,8 @@ class BinanceWebSocketService {
 
   subscribeToStatus(callback: StatusSubscriber): () => void {
     this.statusSubscribers.add(callback)
+    // Immediately notify new subscriber of current status
+    callback(this.status)
 
     return () => {
       this.statusSubscribers.delete(callback)
@@ -60,61 +68,144 @@ class BinanceWebSocketService {
   }
 
   private connect() {
-    if (this.ws) this.ws.close()
+    // Clear any existing reconnect timer
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
+
+    // Prevent duplicate connections if already connected or connecting
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return
+    }
+
+    // Clean up any existing inactive socket cleanly
+    if (this.ws) {
+      this.ws.onopen = null
+      this.ws.onmessage = null
+      this.ws.onerror = null
+      this.ws.onclose = null
+      try {
+        this.ws.close()
+      } catch {
+        // Ignore close error on stale socket
+      }
+      this.ws = null
+    }
 
     this.setStatus('connecting')
 
-    const streams = this.SYMBOLS.map(s => `${s}@ticker`).join('/')
-    const ws = new WebSocket(`${this.BASE_URL}${streams}`)
+    try {
+      const streams = this.SYMBOLS.map(s => `${s}@ticker`).join('/')
+      const ws = new WebSocket(`${this.BASE_URL}${streams}`)
+      this.ws = ws
 
-    this.ws = ws
-
-    ws.onopen = () => {
-      this.reconnectAttempts = 0
-      this.setStatus('connected')
-      this.startHeartbeat()
-    }
-
-    ws.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data)
-        const data = payload.data ?? payload
-
-        const update: PriceUpdate = {
-          symbol: data.s?.replace('USDT', '') ?? '',
-          price: parseFloat(data.c ?? 0),
-          change: parseFloat(data.P ?? 0),
-          volume: parseFloat(data.v ?? 0),
-          timestamp: Date.now(),
-        }
-
-        if (this.lastPing) {
-          this.latency = Date.now() - this.lastPing
-        }
-
-        this.notifySubscribers(update)
-      } catch (err) {
-        console.error('[BinanceWS] Parse error', err)
+      ws.onopen = () => {
+        if (this.ws !== ws) return
+        this.reconnectAttempts = 0
+        this.lastMessageTime = Date.now()
+        this.setStatus('connected')
+        this.startHeartbeat()
       }
-    }
 
-    ws.onclose = () => {
-      this.stopHeartbeat()
-      this.setStatus('reconnecting')
+      ws.onmessage = (event) => {
+        if (this.ws !== ws) return
+        try {
+          const payload = JSON.parse(event.data)
+          const data = payload.data ?? payload
+
+          const rawSymbol = data.s?.replace('USDT', '') ?? ''
+          if (!rawSymbol) return
+
+          const rawPrice = parseFloat(data.c ?? '')
+          const rawChange = parseFloat(data.P ?? '')
+          const rawBaseVolume = parseFloat(data.v ?? '')
+          const rawQuoteVolume = parseFloat(data.q ?? '')
+          const rawHigh = parseFloat(data.h ?? '')
+          const rawLow = parseFloat(data.l ?? '')
+
+          // Validate against malformed or non-finite values
+          if (!Number.isFinite(rawPrice) || rawPrice <= 0) {
+            return
+          }
+
+          const baseVolume = Number.isFinite(rawBaseVolume) && rawBaseVolume >= 0 ? rawBaseVolume : 0
+          const quoteVolume = Number.isFinite(rawQuoteVolume) && rawQuoteVolume >= 0 ? rawQuoteVolume : undefined
+
+          const update: PriceUpdate = {
+            symbol: rawSymbol,
+            price: rawPrice,
+            change: Number.isFinite(rawChange) ? rawChange : 0,
+            volume: baseVolume,
+            baseVolume,
+            quoteVolume,
+            high24h: Number.isFinite(rawHigh) && rawHigh > 0 ? rawHigh : undefined,
+            low24h: Number.isFinite(rawLow) && rawLow > 0 ? rawLow : undefined,
+            timestamp: Date.now(),
+          }
+
+          this.lastMessageTime = Date.now()
+
+          if (this.lastPing) {
+            this.latency = Math.max(0, Date.now() - this.lastPing)
+          }
+
+          this.notifySubscribers(update)
+        } catch (err) {
+          console.error('[BinanceWS] Malformed packet received', err)
+        }
+      }
+
+      ws.onclose = () => {
+        if (this.ws !== ws) return
+        this.stopHeartbeat()
+        this.ws = null
+
+        // If there are still active subscribers, handle reconnection
+        if (this.subscribers.size > 0) {
+          if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+            this.setStatus('offline')
+          } else {
+            this.setStatus('reconnecting')
+            this.scheduleReconnect()
+          }
+        } else {
+          this.setStatus('offline')
+        }
+      }
+
+      ws.onerror = () => {
+        if (this.ws !== ws) return
+        // Trigger close to initiate safe cleanup through onclose
+        try {
+          ws.close()
+        } catch {
+          // Ignore close errors
+        }
+      }
+    } catch (err) {
+      console.error('[BinanceWS] Connection initiation error', err)
       this.scheduleReconnect()
-    }
-
-    ws.onerror = () => {
-      ws.close()
     }
   }
 
   private scheduleReconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
+
+    if (this.subscribers.size === 0) {
+      this.setStatus('offline')
+      return
+    }
+
     if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
       this.setStatus('offline')
       return
     }
 
+    // Exponential backoff capped at 30 seconds
     const delay = Math.min(1000 * Math.pow(1.8, this.reconnectAttempts), 30000)
     this.reconnectAttempts++
 
@@ -124,9 +215,19 @@ class BinanceWebSocketService {
   }
 
   private startHeartbeat() {
+    this.stopHeartbeat()
     this.heartbeatInterval = setInterval(() => {
       this.lastPing = Date.now()
-      // Binance doesn't require ping, but we use it for latency measurement
+
+      // Stale data detection: if connected but received nothing for 45 seconds, reconnect
+      if (this.status === 'connected' && this.lastMessageTime > 0) {
+        const timeSinceLastMessage = Date.now() - this.lastMessageTime
+        if (timeSinceLastMessage > 45000) {
+          console.warn('[BinanceWS] Stale socket detected (no messages for >45s). Reconnecting...')
+          this.disconnectSocketOnly()
+          this.scheduleReconnect()
+        }
+      }
     }, 15000)
   }
 
@@ -138,16 +239,30 @@ class BinanceWebSocketService {
   }
 
   private notifySubscribers(update: PriceUpdate) {
-    this.subscribers.forEach((callback) => callback(update))
+    this.subscribers.forEach((callback) => {
+      try {
+        callback(update)
+      } catch (err) {
+        console.error('[BinanceWS] Subscriber callback error:', err)
+      }
+    })
   }
 
   private notifyStatusSubscribers(status: ConnectionStatus) {
-    this.statusSubscribers.forEach((callback) => callback(status))
+    this.statusSubscribers.forEach((callback) => {
+      try {
+        callback(status)
+      } catch (err) {
+        console.error('[BinanceWS] Status subscriber callback error:', err)
+      }
+    })
   }
 
   private setStatus(status: ConnectionStatus) {
-    this.status = status
-    this.notifyStatusSubscribers(status)
+    if (this.status !== status) {
+      this.status = status
+      this.notifyStatusSubscribers(status)
+    }
   }
 
   getStatus(): ConnectionStatus {
@@ -158,22 +273,50 @@ class BinanceWebSocketService {
     return this.latency
   }
 
-  private disconnect() {
-    if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout)
-    this.stopHeartbeat()
+  getLastMessageTime(): number {
+    return this.lastMessageTime
+  }
 
+  isPriceStale(timestamp: number, maxAgeMs = this.STALE_DATA_THRESHOLD_MS): boolean {
+    if (!timestamp || timestamp <= 0) return true
+    return Date.now() - timestamp > maxAgeMs
+  }
+
+  reconnect() {
+    this.reconnectAttempts = 0
+    this.connect()
+  }
+
+  private disconnectSocketOnly() {
     if (this.ws) {
+      this.ws.onopen = null
+      this.ws.onmessage = null
+      this.ws.onerror = null
       this.ws.onclose = null
-      this.ws.close()
+      try {
+        this.ws.close()
+      } catch {
+        // Ignore
+      }
       this.ws = null
     }
+  }
 
-    this.subscribers.clear()
+  private disconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
+    this.stopHeartbeat()
+    this.disconnectSocketOnly()
+    this.reconnectAttempts = 0
     this.setStatus('offline')
   }
 
   destroy() {
     this.disconnect()
+    this.subscribers.clear()
+    this.statusSubscribers.clear()
     BinanceWebSocketService.instance = null
   }
 }

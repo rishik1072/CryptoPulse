@@ -12,21 +12,33 @@ export const useCryptoNews = (limit = 15) => {
   return useQuery<CryptoNews[]>({
     queryKey: ['crypto-news', limit],
     queryFn: async () => {
-      // Using RSS2JSON free service to fetch real crypto news
       const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=cryptocurrency&hl=en-US&gl=US&ceid=US:en')
       
-      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`)
+      let res: Response
+      try {
+        res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`)
+      } catch (err) {
+        throw new Error(`Failed to fetch crypto news: ${(err as Error).message}`)
+      }
+
+      if (!res.ok) {
+        throw new Error(`Crypto news feed unavailable (HTTP ${res.status})`)
+      }
+
       const data = await res.json()
+      if (!data || !Array.isArray(data.items)) {
+        return []
+      }
       
       return data.items.slice(0, limit).map((item: { title: string; link: string; author?: string; pubDate: string }, index: number) => ({
         id: String(index),
-        title: item.title,
-        url: item.link,
+        title: item.title || 'Untitled',
+        url: item.link || '#',
         source: item.author || 'News',
-        published_at: item.pubDate,
+        published_at: item.pubDate || new Date().toISOString(),
       }))
     },
     staleTime: 1000 * 60 * 10,
-    retry: 2,
+    retry: 1,
   })
 }

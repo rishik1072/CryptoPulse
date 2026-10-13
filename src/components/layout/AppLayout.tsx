@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Navbar } from './Navbar'
@@ -7,9 +8,16 @@ import { PageTransition } from '@/components/ui/PageTransition'
 import { CommandPalette } from '@/components/ui/CommandPalette'
 import { GlobalLoading } from '@/components/ui/GlobalLoading'
 import { useUIStore } from '@/store/useUIStore'
+import { useLivePriceStore } from '@/store/useLivePriceStore'
 
 export function AppLayout() {
   const { sidebarOpen, closeSidebar } = useUIStore()
+  const { subscribeToLivePrices } = useLivePriceStore()
+
+  useEffect(() => {
+    const unsubscribe = subscribeToLivePrices()
+    return unsubscribe
+  }, [subscribeToLivePrices])
 
   return (
     <div className="min-h-screen bg-transparent text-slate-900">

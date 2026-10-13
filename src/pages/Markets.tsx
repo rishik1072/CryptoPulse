@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useInfiniteMarketData, useTrendingCoins } from '@/services/coingecko'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
 import { useWatchlistStore } from '@/store/useWatchlistStore'
+import { formatCompactUSD } from '@/services/priceResolver'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Search, Star, ArrowUpDown, Sparkles, Filter, ChevronRight } from 'lucide-react'
@@ -20,12 +21,6 @@ function formatCurrency(value: number) {
     currency: 'USD',
     maximumFractionDigits: value >= 1000000000 ? 0 : value >= 1000000 ? 1 : 2,
   }).format(value)
-}
-
-function formatCompact(value: number) {
-  if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`
-  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`
-  return value.toFixed(0)
 }
 
 export default function Markets() {
@@ -54,7 +49,8 @@ export default function Markets() {
         ...coin,
         current_price: live?.price ?? coin.current_price,
         price_change_percentage_24h: live?.change ?? coin.price_change_percentage_24h,
-        total_volume: live?.volume ?? coin.total_volume,
+        // Preserve CoinGecko aggregate 24h USD volume; do NOT overwrite with single-exchange base volume
+        total_volume: typeof coin.total_volume === 'number' && Number.isFinite(coin.total_volume) ? coin.total_volume : 0,
       }
     })
   }, [data, livePrices])
@@ -350,13 +346,13 @@ export default function Markets() {
                       </div>
 
                       <div className="hidden min-w-[110px] text-right lg:block">
-                        <div className="font-mono text-sm text-slate-700">{formatCompact(coin.market_cap)}</div>
+                        <div className="font-mono text-sm text-slate-700">{formatCompactUSD(coin.market_cap)}</div>
                         <div className="text-xs text-slate-500">Market cap</div>
                       </div>
 
                       <div className="hidden min-w-[110px] text-right xl:block">
-                        <div className="font-mono text-sm text-slate-700">{formatCompact(coin.total_volume)}</div>
-                        <div className="text-xs text-slate-500">Volume</div>
+                        <div className="font-mono text-sm text-slate-700">{formatCompactUSD(coin.total_volume)}</div>
+                        <div className="text-xs text-slate-500">24h Vol (USD)</div>
                       </div>
 
                       <div className="flex items-center gap-2">

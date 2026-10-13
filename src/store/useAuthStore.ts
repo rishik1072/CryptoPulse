@@ -1,6 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useUIStore } from './useUIStore'
+import {
+  getSession,
+  signOut as supabaseSignOut,
+  updateProfile as supabaseUpdateProfile,
+  uploadAvatar,
+  signInWithEmail,
+  signUpWithEmail,
+  signInWithGoogle as supabaseSignInWithGoogle,
+  resetPassword as supabaseResetPassword,
+  updatePassword as supabaseUpdatePassword,
+  deleteAccount as supabaseDeleteAccount,
+  formatAuthError,
+} from '@/lib/supabase'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export interface UserPreferences {
   currency: string
@@ -24,26 +38,15 @@ export interface AuthUser {
   provider: 'local' | 'google'
 }
 
-interface StoredUserRecord {
-  email: string
-  password?: string // Google sign-in might not have a local password
-  user: AuthUser
-  activityLogs: Array<{ id: string; action: string; timestamp: string }>
-}
-
 interface AuthState {
   user: AuthUser | null
-  users: Record<string, StoredUserRecord>
   isAuthenticated: boolean
   isHydrated: boolean
   isLoading: boolean
   error: string | null
   success: string | null
   rememberMe: boolean
-  pendingResetEmail: string | null
-  pendingResetToken: string | null
-  hasTwoFactor: boolean
-  connectedGoogle: boolean
+  preferences: UserPreferences
   sessions: Array<{
     id: string
     device: string
@@ -51,30 +54,35 @@ interface AuthState {
     lastSeen: string
     current: boolean
   }>
-  preferences: UserPreferences
-  accessToken: string | null
-  refreshToken: string | null
-  accessTokenExpiresAt: number | null // Timestamp in ms
   activityLogs: Array<{ id: string; action: string; timestamp: string }>
+  hasTwoFactor: boolean
+  connectedGoogle: boolean
   
+  // Actions
   signIn: (email: string, password: string, options?: { rememberMe?: boolean }) => Promise<boolean>
   signUp: (name: string, email: string, password: string) => Promise<boolean>
-  signOut: () => void
+  signOut: () => Promise<void>
   forgotPassword: (email: string) => Promise<boolean>
-  resetPassword: (email: string, token: string, password: string) => Promise<boolean>
-  updateProfile: (updates: Partial<AuthUser>) => void
-  changePassword: (currentPassword: string, newPassword: string) => boolean
+  resetPassword: (password: string) => Promise<boolean>
+  updateProfile: (updates: Partial<AuthUser>) => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>
   toggleTwoFactor: (value?: boolean) => void
   setConnectedGoogle: (value: boolean) => void
   clearMessages: () => void
-  deleteAccount: () => void
+  deleteAccount: () => Promise<void>
   refreshSession: () => Promise<boolean>
   clearSessions: () => void
   updatePreferences: (prefs: Partial<UserPreferences>) => void
   resetPreferences: () => void
-  signInWithGoogle: (name: string, email: string, avatarUrl: string) => Promise<boolean>
-  signUpWithGoogle: (name: string, email: string, avatarUrl: string) => Promise<boolean>
   addActivityLog: (action: string) => void
+  uploadAvatar: (file: File) => Promise<string | null>
+  signInWithGoogle: () => Promise<boolean>
+  
+  // Internal sync methods for AuthProvider
+  setUser: (user: SupabaseUser | null) => void
+  setAuthenticated: (value: boolean) => void
+  setLoading: (value: boolean) => void
+  clearAuth: () => void
 }
 
 const defaultPreferences: UserPreferences = {
@@ -91,341 +99,271 @@ const defaultPreferences: UserPreferences = {
 
 const createUserId = () => Date.now().toString(36) + Math.random().toString(36).slice(2)
 
+export const mapSupabaseUser = (supabaseUser: SupabaseUser): AuthUser => {
+  const provider = supabaseUser.app_metadata?.provider
+  return {
+    id: supabaseUser.id,
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+    email: supabaseUser.email || '',
+    phone: supabaseUser.phone || supabaseUser.user_metadata?.phone,
+    avatarUrl: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
+    createdAt: supabaseUser.created_at,
+    provider: provider === 'google' ? 'google' : 'local',
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      users: {},
       isAuthenticated: false,
       isHydrated: false,
       isLoading: false,
       error: null,
       success: null,
       rememberMe: true,
-      pendingResetEmail: null,
-      pendingResetToken: null,
+      preferences: defaultPreferences,
+      sessions: [],
+      activityLogs: [],
       hasTwoFactor: false,
       connectedGoogle: false,
-      sessions: [
-        {
-          id: 'session-1',
-          device: 'Current Chrome browser (Windows)',
-          location: 'Bengaluru, India',
-          lastSeen: new Date().toLocaleString(),
-          current: true,
-        },
-      ],
-      preferences: defaultPreferences,
-      accessToken: null,
-      refreshToken: null,
-      accessTokenExpiresAt: null,
-      activityLogs: [],
 
       signIn: async (email, password, options) => {
-        const normalizedEmail = email.trim().toLowerCase()
-        const record = get().users[normalizedEmail]
-
         set({ isLoading: true, error: null, success: null })
 
-        // Add 600ms delay to simulate real server network lag & loading spinner verification
-        await new Promise((resolve) => setTimeout(resolve, 600))
+        try {
+          const { data, error: signInError } = await signInWithEmail(email.trim().toLowerCase(), password)
 
-        if (!record || record.password !== password) {
-          set({ isLoading: false, error: 'We could not find a matching account with that email and password.', success: null })
+          if (signInError) {
+            set({ 
+              isLoading: false, 
+              error: formatAuthError(signInError),
+              success: null 
+            })
+            return false
+          }
+
+          if (data.user) {
+            const user = mapSupabaseUser(data.user)
+
+            const loginSession = {
+              id: 'session_' + createUserId(),
+              device: `Browser (${navigator.userAgent.includes('Windows') ? 'Windows' : 'Desktop/Mobile'})`,
+              location: 'Current session',
+              lastSeen: new Date().toLocaleString(),
+              current: true,
+            }
+
+            const nextSessions = [
+              loginSession,
+              ...get().sessions.map((s) => ({ ...s, current: false })),
+            ]
+
+            set({
+              user,
+              isAuthenticated: true,
+              rememberMe: options?.rememberMe ?? true,
+              sessions: nextSessions,
+              isLoading: false,
+              success: 'Welcome back to CryptoPulse.',
+            })
+
+            get().addActivityLog('Logged in successfully')
+            return true
+          }
+
+          set({ isLoading: false, error: 'Authentication failed. Please check your credentials.' })
+          return false
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
           return false
         }
-
-        const user = { ...record.user, email: normalizedEmail }
-        const rToken = 'refresh_' + createUserId()
-        const aToken = 'access_' + createUserId()
-        const expiresAt = Date.now() + 15 * 60 * 1000 // 15 mins
-
-        // Set token persistence based on rememberMe checkbox
-        if (options?.rememberMe ?? true) {
-          localStorage.setItem('cryptopulse_refresh_token', rToken)
-        } else {
-          sessionStorage.setItem('cryptopulse_refresh_token', rToken)
-        }
-
-        // Add login session log
-        const currentDevice = navigator.userAgent.includes('Windows') ? 'Windows Device' : 'Mobile Device'
-        const loginSession = {
-          id: 'session_' + createUserId(),
-          device: `Chrome browser (${currentDevice})`,
-          location: 'Your current location',
-          lastSeen: new Date().toLocaleString(),
-          current: true,
-        }
-
-        const nextSessions = [
-          loginSession,
-          ...get().sessions.map((s) => ({ ...s, current: false })),
-        ]
-
-        set({
-          user,
-          isAuthenticated: true,
-          rememberMe: options?.rememberMe ?? true,
-          accessToken: aToken,
-          refreshToken: rToken,
-          accessTokenExpiresAt: expiresAt,
-          sessions: nextSessions,
-          activityLogs: record.activityLogs || [],
-          isLoading: false,
-          success: 'Welcome back to CryptoPulse.',
-        })
-
-        get().addActivityLog('Logged in successfully')
-        return true
       },
 
       signUp: async (name, email, password) => {
         const normalizedEmail = email.trim().toLowerCase()
-        const safeName = name.trim() || 'CryptoPulse Investor'
+        const safeName = name.trim() || 'Investor'
 
         set({ isLoading: true, error: null, success: null })
 
-        await new Promise((resolve) => setTimeout(resolve, 600))
+        try {
+          const { data, error } = await signUpWithEmail(normalizedEmail, password, safeName)
 
-        if (!normalizedEmail || !password) {
-          set({ isLoading: false, error: 'Enter a valid email and password to continue.', success: null })
-          return false
-        }
+          if (error) {
+            set({ 
+              isLoading: false, 
+              error: formatAuthError(error),
+              success: null 
+            })
+            return false
+          }
 
-        if (get().users[normalizedEmail]) {
-          set({ isLoading: false, error: 'An account with that email already exists.', success: null })
-          return false
-        }
+          if (data.user) {
+            const initialLogs = [{ id: createUserId(), action: 'Account created', timestamp: new Date().toISOString() }]
 
-        const newUser: AuthUser = {
-          id: createUserId(),
-          name: safeName,
-          email: normalizedEmail,
-          createdAt: new Date().toISOString(),
-          provider: 'local',
-          avatarUrl: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(normalizedEmail)}`,
-        }
+            // If Supabase email confirmation is enabled, session might be null initially
+            const hasSession = Boolean(data.session)
+            const user = hasSession ? mapSupabaseUser(data.user) : null
 
-        const initialLogs = [{ id: createUserId(), action: 'Account created', timestamp: new Date().toISOString() }]
-
-        const rToken = 'refresh_' + createUserId()
-        const aToken = 'access_' + createUserId()
-        const expiresAt = Date.now() + 15 * 60 * 1000
-
-        localStorage.setItem('cryptopulse_refresh_token', rToken)
-
-        set((state) => ({
-          users: {
-            ...state.users,
-            [normalizedEmail]: {
-              email: normalizedEmail,
-              password,
-              user: newUser,
+            set({
+              user,
+              isAuthenticated: hasSession,
               activityLogs: initialLogs,
-            },
-          },
-          user: newUser,
-          isAuthenticated: true,
-          accessToken: aToken,
-          refreshToken: rToken,
-          accessTokenExpiresAt: expiresAt,
-          activityLogs: initialLogs,
-          isLoading: false,
-          success: 'Your CryptoPulse account is ready.',
-        }))
+              isLoading: false,
+              success: hasSession
+                ? 'Your CryptoPulse account is ready.'
+                : 'Registration successful! Please check your email to verify your account.',
+            })
 
-        return true
-      },
-
-      signInWithGoogle: async (name, email, avatarUrl) => {
-        const normalizedEmail = email.trim().toLowerCase()
-        set({ isLoading: true, error: null, success: null })
-
-        await new Promise((resolve) => setTimeout(resolve, 800))
-
-        let record = get().users[normalizedEmail]
-        let user: AuthUser
-
-        if (!record) {
-          // Auto sign up if user does not exist
-          user = {
-            id: createUserId(),
-            name,
-            email: normalizedEmail,
-            avatarUrl,
-            createdAt: new Date().toISOString(),
-            provider: 'google',
+            return true
           }
-          record = {
-            email: normalizedEmail,
-            user,
-            activityLogs: [{ id: createUserId(), action: 'Registered via Google Sign In', timestamp: new Date().toISOString() }],
-          }
-        } else {
-          user = { ...record.user, name, avatarUrl, provider: 'google' }
-          record = {
-            ...record,
-            user,
-            activityLogs: [...(record.activityLogs || []), { id: createUserId(), action: 'Logged in via Google Sign In', timestamp: new Date().toISOString() }],
-          }
+
+          set({ isLoading: false, error: 'Account creation failed. Please try again.' })
+          return false
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
+          return false
         }
-
-        const rToken = 'refresh_' + createUserId()
-        const aToken = 'access_' + createUserId()
-        const expiresAt = Date.now() + 15 * 60 * 1000
-
-        localStorage.setItem('cryptopulse_refresh_token', rToken)
-
-        set((state) => ({
-          users: {
-            ...state.users,
-            [normalizedEmail]: record,
-          },
-          user,
-          isAuthenticated: true,
-          accessToken: aToken,
-          refreshToken: rToken,
-          accessTokenExpiresAt: expiresAt,
-          connectedGoogle: true,
-          activityLogs: record.activityLogs,
-          isLoading: false,
-          success: 'Connected and authenticated with Google successfully.',
-        }))
-
-        return true
       },
 
-      signUpWithGoogle: async (name, email, avatarUrl) => {
-        return get().signInWithGoogle(name, email, avatarUrl)
-      },
-
-      signOut: () => {
-        localStorage.removeItem('cryptopulse_refresh_token')
-        sessionStorage.removeItem('cryptopulse_refresh_token')
+      signOut: async () => {
+        set({ isLoading: true })
+        
+        try {
+          await supabaseSignOut()
+        } catch (e) {
+          console.warn('Supabase signout failed, clearing local state:', e)
+        }
+        
         set({
           user: null,
           isAuthenticated: false,
-          accessToken: null,
-          refreshToken: null,
-          accessTokenExpiresAt: null,
           activityLogs: [],
-          error: null,
+          isLoading: false,
           success: 'You have been signed out.',
         })
       },
 
       forgotPassword: async (email) => {
         const normalizedEmail = email.trim().toLowerCase()
-        const record = get().users[normalizedEmail]
 
         set({ isLoading: true, error: null, success: null })
 
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        try {
+          const { error } = await supabaseResetPassword(normalizedEmail)
 
-        if (!record) {
-          set({ isLoading: false, error: 'No account was found with that email address.', success: null })
+          if (error) {
+            set({ 
+              isLoading: false, 
+              error: formatAuthError(error),
+              success: null 
+            })
+            return false
+          }
+
+          set({
+            isLoading: false,
+            success: 'Password reset email sent. Please check your inbox.',
+          })
+
+          return true
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
           return false
         }
-
-        const token = Math.floor(100000 + Math.random() * 900000).toString() // Premium 6 digit code
-        set({
-          pendingResetEmail: normalizedEmail,
-          pendingResetToken: token,
-          isLoading: false,
-          success: `Password reset token prepared. Your mock token is ${token}. Enter it below to proceed.`,
-        })
-
-        return true
       },
 
-      resetPassword: async (email, token, password) => {
-        const normalizedEmail = email.trim().toLowerCase()
-        const record = get().users[normalizedEmail]
+      resetPassword: async (password) => {
+        set({ isLoading: true, error: null, success: null })
 
-        if (!record || get().pendingResetToken !== token || get().pendingResetEmail !== normalizedEmail) {
-          set({ error: 'The reset token is invalid or has expired.', success: null })
+        try {
+          const { error } = await supabaseUpdatePassword(password)
+
+          if (error) {
+            set({ 
+              isLoading: false, 
+              error: formatAuthError(error),
+              success: null 
+            })
+            return false
+          }
+
+          set({
+            isLoading: false,
+            success: 'Password updated successfully. You can sign in with your new password.',
+          })
+
+          return true
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
           return false
         }
-
-        const updatedLogs = [
-          ...(record.activityLogs || []),
-          { id: createUserId(), action: 'Password reset completed', timestamp: new Date().toISOString() },
-        ]
-
-        set((state) => ({
-          users: {
-            ...state.users,
-            [normalizedEmail]: {
-              ...state.users[normalizedEmail],
-              password,
-              activityLogs: updatedLogs,
-            },
-          },
-          pendingResetEmail: null,
-          pendingResetToken: null,
-          success: 'Password updated successfully. You can sign in with your new password.',
-          error: null,
-        }))
-
-        return true
       },
 
-      updateProfile: (updates) => {
-        set((state) => {
-          if (!state.user) return state
-          const updatedUser = { ...state.user, ...updates }
-          const record = state.users[state.user.email]
+      updateProfile: async (updates) => {
+        const currentUser = get().user
+        if (!currentUser) return
+
+        set({ isLoading: true, error: null })
+
+        try {
+          const supabaseUpdates: { full_name?: string; avatar_url?: string; phone?: string } = {}
           
-          const updatedLogs = [
-            ...(record?.activityLogs || []),
-            { id: createUserId(), action: 'Profile details updated', timestamp: new Date().toISOString() },
-          ]
+          if (updates.name) supabaseUpdates.full_name = updates.name
+          if (updates.avatarUrl) supabaseUpdates.avatar_url = updates.avatarUrl
+          if (updates.phone) supabaseUpdates.phone = updates.phone
 
-          return {
+          const { error } = await supabaseUpdateProfile(supabaseUpdates)
+
+          if (error) {
+            set({ isLoading: false, error: formatAuthError(error) })
+            return
+          }
+
+          const updatedUser = { ...currentUser, ...updates }
+          const updatedLogs = [
+            { id: createUserId(), action: 'Profile details updated', timestamp: new Date().toISOString() },
+            ...get().activityLogs,
+          ].slice(0, 50)
+
+          set({
             user: updatedUser,
             activityLogs: updatedLogs,
-            users: {
-              ...state.users,
-              [state.user.email]: {
-                ...record,
-                user: updatedUser,
-                activityLogs: updatedLogs,
-              },
-            },
-          }
-        })
+            isLoading: false,
+            success: 'Profile updated successfully.',
+          })
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
+        }
       },
 
-      changePassword: (currentPassword, newPassword) => {
-        const currentUser = get().user
-        if (!currentUser) return false
+      changePassword: async (_currentPassword, newPassword) => {
+        set({ isLoading: true, error: null })
 
-        const record = get().users[currentUser.email]
-        if (!record || record.password !== currentPassword) {
-          set({ error: 'Your current password is incorrect.', success: null })
+        try {
+          const { error } = await supabaseUpdatePassword(newPassword)
+
+          if (error) {
+            set({ isLoading: false, error: formatAuthError(error) })
+            return false
+          }
+
+          const updatedLogs = [
+            { id: createUserId(), action: 'Password changed securely', timestamp: new Date().toISOString() },
+            ...get().activityLogs,
+          ].slice(0, 50)
+
+          set({
+            activityLogs: updatedLogs,
+            isLoading: false,
+            success: 'Password updated successfully.',
+          })
+
+          return true
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
           return false
         }
-
-        const updatedLogs = [
-          ...(record.activityLogs || []),
-          { id: createUserId(), action: 'Password changed securely', timestamp: new Date().toISOString() },
-        ]
-
-        set((state) => ({
-          users: {
-            ...state.users,
-            [currentUser.email]: {
-              ...state.users[currentUser.email],
-              password: newPassword,
-              activityLogs: updatedLogs,
-            },
-          },
-          activityLogs: updatedLogs,
-          success: 'Password updated successfully.',
-          error: null,
-        }))
-
-        return true
       },
 
       toggleTwoFactor: (value) => {
@@ -441,78 +379,64 @@ export const useAuthStore = create<AuthState>()(
 
       clearMessages: () => set({ error: null, success: null }),
 
-      deleteAccount: () => {
+      deleteAccount: async () => {
         const currentUser = get().user
         if (!currentUser) return
-        
-        localStorage.removeItem('cryptopulse_refresh_token')
-        sessionStorage.removeItem('cryptopulse_refresh_token')
 
-        set((state) => {
-          const nextUsers = { ...state.users }
-          delete nextUsers[currentUser.email]
-          return {
-            users: nextUsers,
+        set({ isLoading: true, error: null })
+
+        try {
+          const { error } = await supabaseDeleteAccount()
+
+          if (error) {
+            set({ isLoading: false, error: error.message || 'Failed to delete account.' })
+            return
+          }
+
+          set({
             user: null,
             isAuthenticated: false,
-            accessToken: null,
-            refreshToken: null,
-            accessTokenExpiresAt: null,
             activityLogs: [],
+            isLoading: false,
             success: 'Your account and all associated data have been permanently removed.',
-            error: null,
-          }
-        })
+          })
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
+        }
       },
 
       refreshSession: async () => {
-        const token = localStorage.getItem('cryptopulse_refresh_token') || sessionStorage.getItem('cryptopulse_refresh_token')
-        
-        if (!token) {
+        try {
+          const { data: { session } } = await getSession()
+          
+          if (session?.user) {
+            const user = mapSupabaseUser(session.user)
+            set({
+              user,
+              isAuthenticated: true,
+            })
+            return true
+          }
+          
+          set({
+            user: null,
+            isAuthenticated: false,
+          })
+          return false
+        } catch {
+          set({
+            user: null,
+            isAuthenticated: false,
+          })
           return false
         }
-
-        set({ isLoading: true })
-        // Simulate minor network lookup
-        await new Promise((resolve) => setTimeout(resolve, 400))
-
-        const activeUser = get().user
-        if (activeUser) {
-          const expiresAt = Date.now() + 15 * 60 * 1000
-          set({
-            accessToken: 'access_' + createUserId(),
-            accessTokenExpiresAt: expiresAt,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-          return true
-        }
-
-        // Try to recover session from user database records if user is empty
-        const allUsers = Object.values(get().users)
-        if (allUsers.length > 0) {
-          const matched = allUsers[0].user // Grab the first active record
-          const expiresAt = Date.now() + 15 * 60 * 1000
-          set({
-            user: matched,
-            activityLogs: allUsers[0].activityLogs || [],
-            accessToken: 'access_' + createUserId(),
-            accessTokenExpiresAt: expiresAt,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-          return true
-        }
-
-        set({ isLoading: false })
-        return false
       },
 
       clearSessions: () => {
         const currentSession = get().sessions.find((s) => s.current) || {
           id: 'session-1',
           device: 'Current device',
-          location: 'Your current location',
+          location: 'Current session',
           lastSeen: new Date().toLocaleString(),
           current: true,
         }
@@ -543,56 +467,100 @@ export const useAuthStore = create<AuthState>()(
       },
 
       addActivityLog: (action) => {
-        const currentUser = get().user
-        if (!currentUser) return
-
-        const record = get().users[currentUser.email]
-        if (!record) return
-
         const newLog = {
           id: createUserId(),
           action,
           timestamp: new Date().toISOString(),
         }
 
-        const updatedLogs = [newLog, ...(record.activityLogs || [])].slice(0, 50) // limit to 50 logs
+        const updatedLogs = [newLog, ...get().activityLogs].slice(0, 50)
 
-        set((state) => ({
+        set({
           activityLogs: updatedLogs,
-          users: {
-            ...state.users,
-            [currentUser.email]: {
-              ...record,
-              activityLogs: updatedLogs,
-            },
-          },
-        }))
+        })
+      },
+
+      signInWithGoogle: async () => {
+        set({ isLoading: true, error: null, success: null })
+
+        try {
+          const { error } = await supabaseSignInWithGoogle()
+          if (error) {
+            set({ isLoading: false, error: formatAuthError(error) })
+            return false
+          }
+          // Browser will redirect to Google OAuth
+          return true
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
+          return false
+        }
+      },
+
+      uploadAvatar: async (file: File) => {
+        const currentUser = get().user
+        if (!currentUser) return null
+
+        set({ isLoading: true, error: null })
+
+        try {
+          const { data, error } = await uploadAvatar(file, currentUser.id)
+
+          if (error) {
+            set({ isLoading: false, error: formatAuthError(error) })
+            return null
+          }
+
+          if (data?.publicUrl) {
+            await get().updateProfile({ avatarUrl: data.publicUrl })
+            return data.publicUrl
+          }
+
+          set({ isLoading: false })
+          return null
+        } catch (err) {
+          set({ isLoading: false, error: formatAuthError(err) })
+          return null
+        }
+      },
+
+      // Internal sync methods for AuthProvider
+      setUser: (supabaseUser: SupabaseUser | null) => {
+        if (!supabaseUser) {
+          set({ user: null, isAuthenticated: false })
+          return
+        }
+        const user = mapSupabaseUser(supabaseUser)
+        set({ user, isAuthenticated: true })
+      },
+
+      setAuthenticated: (value: boolean) => {
+        set({ isAuthenticated: value })
+      },
+
+      setLoading: (value: boolean) => {
+        set({ isLoading: value })
+      },
+
+      clearAuth: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          activityLogs: [],
+        })
       },
     }),
     {
-      name: 'cryptopulse-auth-v3', // increment version to clear out any old incompatible persist data structures
-      version: 3,
-      merge: (persistedState, currentState) => {
-        const state = persistedState as Partial<AuthState>
-        return {
-          ...currentState,
-          ...state,
-          user: state.user ?? null,
-          users: state.users ?? {},
-          preferences: state.preferences ?? defaultPreferences,
-          isHydrated: true,
-          isAuthenticated: Boolean(state.user),
-        }
-      },
-      onRehydrateStorage: () => (state) => {
-        // Called whether or not persisted data exists — always mark hydration complete
-        if (state) {
-          state.isHydrated = true
-          state.isAuthenticated = Boolean(state.user)
-        } else {
-          // No persisted state (first-time visitor or cleared storage)
-          useAuthStore.setState({ isHydrated: true })
-        }
+      name: 'cryptopulse-auth-v4',
+      version: 4,
+      // Do not store authentication tokens in Zustand persistence.
+      // Supabase manages session persistence and tokens.
+      partialize: (state) => ({
+        preferences: state.preferences,
+        rememberMe: state.rememberMe,
+      }),
+      onRehydrateStorage: () => () => {
+        useAuthStore.setState({ isHydrated: true })
       },
     }
   )

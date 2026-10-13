@@ -158,15 +158,15 @@ export default function News() {
             <div className="space-y-4 text-sm">
               <div className="flex justify-between">
                 <span>BTC Dominance</span>
-                <span className="font-mono">{global?.market_cap_percentage.btc.toFixed(1)}%</span>
+                <span className="font-mono">{global?.market_cap_percentage?.btc != null ? `${global.market_cap_percentage.btc.toFixed(1)}%` : '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span>ETH Dominance</span>
-                <span className="font-mono">{global?.market_cap_percentage.eth.toFixed(1)}%</span>
+                <span className="font-mono">{global?.market_cap_percentage?.eth != null ? `${global.market_cap_percentage.eth.toFixed(1)}%` : '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Global Volume</span>
-                <span className="font-mono">${((global?.total_volume.usd || 0) / 1e9).toFixed(1)}B</span>
+                <span className="font-mono">{global?.total_volume?.usd != null ? `$${((global.total_volume.usd) / 1e9).toFixed(1)}B` : '—'}</span>
               </div>
             </div>
           </GlassCard>
@@ -175,15 +175,25 @@ export default function News() {
           <GlassCard>
             <div className="text-xs text-muted mb-4">TRENDING</div>
             <div className="space-y-3 text-sm">
-              {trending?.coins?.slice(0, 5).map((coin: { item: { small: string; name: string; data: { price_change_percentage_24h: { usd: number } } } }, i: number) => (
-                <div key={i} className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <img src={coin.item.small} className="h-5 w-5 rounded-full" alt="" />
-                    <span>{coin.item.name}</span>
+              {trending?.coins?.slice(0, 5).map((coin, i: number) => {
+                const change = coin.item.data?.price_change_percentage_24h?.usd
+                const isPositive = (change ?? 0) >= 0
+                return (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <img src={coin.item.small} className="h-5 w-5 rounded-full" alt="" />
+                      <span>{coin.item.name}</span>
+                    </div>
+                    {change != null ? (
+                      <span className={`text-xs ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {isPositive ? '+' : ''}{change.toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">—</span>
+                    )}
                   </div>
-                  <span className="text-xs text-success">+{coin.item.data.price_change_percentage_24h.usd.toFixed(1)}%</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </GlassCard>
         </div>

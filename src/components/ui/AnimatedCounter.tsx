@@ -1,21 +1,38 @@
 import { useEffect } from 'react'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 
-interface AnimatedCounterProps {
+export interface AnimatedCounterProps {
   value: number
   prefix?: string
   suffix?: string
   duration?: number
+  decimals?: number
 }
 
 export function AnimatedCounter({ 
   value, 
   prefix = '', 
   suffix = '', 
-  duration = 1.2 
+  duration = 1.2,
+  decimals,
 }: AnimatedCounterProps) {
   const count = useMotionValue(0)
-  const rounded = useTransform(count, latest => Math.round(latest))
+  
+  const effectiveDecimals =
+    typeof decimals === 'number' && decimals >= 0
+      ? decimals
+      : !Number.isInteger(value)
+      ? 2
+      : 0
+
+  const formatted = useTransform(count, (latest) => {
+    if (!Number.isFinite(latest)) return '0'
+
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: effectiveDecimals,
+      maximumFractionDigits: effectiveDecimals,
+    }).format(latest)
+  })
 
   useEffect(() => {
     const controls = animate(count, value, {
@@ -28,7 +45,7 @@ export function AnimatedCounter({
   return (
     <span className="tabular-nums">
       {prefix}
-      <motion.span>{rounded}</motion.span>
+      <motion.span>{formatted}</motion.span>
       {suffix}
     </span>
   )

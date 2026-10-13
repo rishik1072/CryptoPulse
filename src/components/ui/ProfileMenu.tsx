@@ -1,86 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { User, LogOut, Settings as SettingsIcon, CreditCard } from 'lucide-react'
-import { useClerk, useUser } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
-
-function ClerkProfileMenu() {
-  const [open, setOpen] = useState(false)
-  const { user, isLoaded } = useUser()
-  const { signOut } = useClerk()
-  const { preferences } = useAuthStore()
-  const isDark = preferences.theme === 'dark'
-
-  const displayName = useMemo(() => user?.fullName || user?.firstName || 'Investor', [user])
-  const email = useMemo(() => user?.primaryEmailAddress?.emailAddress || 'Secure workspace', [user])
-  const avatarUrl = user?.imageUrl
-
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center gap-2.5 rounded-2xl px-2 py-1.5">
-        <div className={isDark ? 'h-8 w-8 rounded-xl bg-slate-800' : 'h-8 w-8 rounded-xl bg-slate-100'} />
-        <div className="hidden text-left md:block">
-          <div className={`text-sm font-medium ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>Loading…</div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((value) => !value)}
-        className={`flex items-center gap-2.5 rounded-2xl px-2 py-1.5 transition-all hover:scale-[1.01] ${isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-100'}`}
-      >
-        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 ring-1 ring-white/20">
-          {avatarUrl ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" /> : <User className="h-4 w-4 text-white" />}
-        </div>
-        <div className="hidden text-left md:block">
-          <div className={`text-sm font-medium ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{displayName}</div>
-          <div className={`-mt-0.5 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{email}</div>
-        </div>
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            className={`absolute right-0 top-[54px] z-50 w-60 rounded-3xl border py-1 shadow-xl backdrop-blur-xl ${isDark ? 'border-slate-800 bg-slate-950/95' : 'border-slate-200 bg-white/95'}`}
-          >
-            <div className={`border-b px-4 py-3 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className={`font-medium ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{displayName}</div>
-              <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{email}</div>
-            </div>
-
-            <div className="py-1">
-              <Link to="/settings" className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <User className={`h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> Profile
-              </Link>
-              <Link to="/settings" className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <CreditCard className={`h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> Billing
-              </Link>
-              <Link to="/settings" className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <SettingsIcon className={`h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> Preferences
-              </Link>
-            </div>
-
-            <div className={`mt-1 border-t pt-1 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-              <button
-                onClick={() => void signOut(() => window.location.assign(import.meta.env.VITE_CLERK_AFTER_SIGN_OUT_URL || '/sign-in'))}
-                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm text-rose-500 transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
-              >
-                <LogOut className="h-4 w-4" /> Sign out
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
 
 function LocalProfileMenu() {
   const [open, setOpen] = useState(false)
@@ -164,14 +86,5 @@ function LocalProfileMenu() {
 }
 
 export function ProfileMenu() {
-  const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined
-  const clerkEnabled = Boolean(
-    clerkPublishableKey && clerkPublishableKey !== 'your_clerk_publishable_key_here' && clerkPublishableKey.startsWith('pk_live_')
-  )
-
-  if (!clerkEnabled) {
-    return <LocalProfileMenu />
-  }
-
-  return <ClerkProfileMenu />
+  return <LocalProfileMenu />
 }

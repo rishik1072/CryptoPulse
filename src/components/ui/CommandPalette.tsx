@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, Wallet, Star, Settings, Home, BellRing, Sparkles } from 'lucide-react'
+import { Search, TrendingUp, Wallet, Star, Settings, Home, BellRing, Sparkles, User, Newspaper } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface CommandItem {
@@ -14,6 +14,8 @@ const commands: CommandItem[] = [
   { label: 'Overview', icon: Home, path: '/' },
   { label: 'Markets', icon: TrendingUp, path: '/markets' },
   { label: 'Portfolio', icon: Wallet, path: '/portfolio' },
+  { label: 'Profile', icon: User, path: '/profile' },
+  { label: 'News Center', icon: Newspaper, path: '/news' },
   { label: 'Watchlist', icon: Star, path: '/watchlist' },
   { label: 'Alerts', icon: BellRing, path: '/alerts' },
   { label: 'Settings', icon: Settings, path: '/settings' },

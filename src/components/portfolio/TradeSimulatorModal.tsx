@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRightLeft, CheckCircle2, ShieldCheck, Sparkles, TrendingUp, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePortfolioStore } from '@/store/usePortfolioStore'
 import { useUIStore } from '@/store/useUIStore'
 
@@ -45,34 +45,27 @@ export function TradeSimulatorModal({
   const [step, setStep] = useState<ModalStep>('form')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!isOpen) return
-
-    setMode(initialMode)
-    setQuantity(1)
-    setFeeRate(0.25)
-    setSlippage(0.5)
-    setStep('form')
-    setError(null)
-  }, [isOpen, initialMode])
+  // Reset form state when modal opens or initialMode changes
+  // Using a ref to track previous values and only reset when needed
+  const prevIsOpenRef = useRef(isOpen)
+  const prevInitialModeRef = useRef(initialMode)
 
   useEffect(() => {
-    if (!isOpen) return
+    const wasClosed = !prevIsOpenRef.current && isOpen
+    const modeChanged = prevInitialModeRef.current !== initialMode
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
-
-      if (event.key === 'Enter' && step === 'form') {
-        event.preventDefault()
-        handlePreview()
-      }
+    if (wasClosed || modeChanged) {
+      setMode(initialMode)
+      setQuantity(1)
+      setFeeRate(0.25)
+      setSlippage(0.5)
+      setStep('form')
+      setError(null)
     }
 
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isOpen, step, quantity, feeRate, slippage, mode])
+    prevIsOpenRef.current = isOpen
+    prevInitialModeRef.current = initialMode
+  }, [isOpen, initialMode])
 
   const existingHolding = holdings.find((holding) => holding.coinId === coinId)
   const availableQuantity = existingHolding?.quantity ?? 0
@@ -92,7 +85,7 @@ export function TradeSimulatorModal({
     }
   }, [availableQuantity, feeRate, mode, price, quantity, slippage])
 
-  const handlePreview = () => {
+  const handlePreview = useCallback(() => {
     if (!quantity || quantity <= 0) {
       setError('Enter a positive amount to continue.')
       return
@@ -105,7 +98,26 @@ export function TradeSimulatorModal({
 
     setError(null)
     setStep('preview')
-  }
+  }, [quantity, mode, availableQuantity])
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    if (!isOpen) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+
+      if (event.key === 'Enter' && step === 'form') {
+        event.preventDefault()
+        handlePreview()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isOpen, step, onClose, handlePreview])
 
   const handleConfirm = () => {
     if (!coinId) return
