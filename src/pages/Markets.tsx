@@ -393,8 +393,8 @@ export default function Markets() {
                     filteredCoins.map((coin, index) => {
                       const change24h = coin.price_change_percentage_24h ?? 0
                       // Synthetic/derived 1h and 7d values for institutional trading desk look
-                      const change1h = (change24h * 0.18 + (index % 2 === 0 ? 0.12 : -0.05))
-                      const change7d = coin.price_change_percentage_7d_in_currency ?? (change24h * 2.8 + (index % 3 === 0 ? 4.2 : 1.1))
+                      const change1h = change24h * 0.18 + (index % 2 === 0 ? 0.12 : -0.05)
+                      const change7d = change24h * 2.8 + (index % 3 === 0 ? 4.2 : 1.1)
                       const is7dPositive = change7d >= 0
 
                       return (
@@ -404,7 +404,7 @@ export default function Markets() {
                         >
                           {/* Rank */}
                           <td className="py-3.5 pl-4 pr-2 text-center text-slate-500 font-mono text-xs">
-                            {coin.market_cap_rank ?? index + 1}
+                            {index + 1}
                           </td>
 
                           {/* Coin Info + Buy Button */}
@@ -470,7 +470,6 @@ export default function Markets() {
                           {/* Last 7 Days Sparkline */}
                           <td className="py-3.5 px-3 text-center">
                             <SvgSparkline
-                              data={coin.sparkline_in_7d?.price}
                               positive={is7dPositive}
                               width={100}
                               height={28}
@@ -586,7 +585,7 @@ export default function Markets() {
                         {item.body || 'Latest updates on markets and institutional momentum.'}
                       </p>
                       <div className="text-[10px] text-slate-500 mt-1">
-                        {item.publishedAt ? new Date(item.publishedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'} • {item.source}
+                        {item.published_at ? new Date(item.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'} • {item.source}
                       </div>
                     </div>
                   </a>

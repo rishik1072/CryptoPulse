@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom'
 export function Navbar() {
   const { toggleSidebar } = useUIStore()
   const { connectionStatus, lastUpdate } = useLivePriceStore()
-  const { preferences, updatePreferences, user } = useAuthStore()
+  const { preferences, updatePreferences } = useAuthStore()
 
   const isDark = preferences.theme === 'dark'
 
