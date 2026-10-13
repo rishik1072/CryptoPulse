@@ -26,8 +26,8 @@ Deno.serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      console.error('Server configuration error: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+      console.error('Server configuration error: Missing SUPABASE_URL, SUPABASE_ANON_KEY, or SUPABASE_SERVICE_ROLE_KEY')
       return new Response(
         JSON.stringify({ error: 'Server configuration error: Edge Function credentials not set' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -43,8 +43,8 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Client with anon key to verify calling user's JWT
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceRoleKey, {
+    // Client with anon key to strictly verify calling user's JWT
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
     })

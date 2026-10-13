@@ -144,7 +144,7 @@ export function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
         return
       }
 
-      const success = addHolding({
+      const success = await addHolding({
         coinId: resolved.id,
         symbol: resolved.symbol.toUpperCase(),
         name: resolved.name || data.name,
@@ -158,7 +158,8 @@ export function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
       if (success) {
         handleModalClose()
       } else {
-        setResolveError('Failed to save holding. Please verify the quantity and price inputs.')
+        const storeErr = usePortfolioStore.getState().error
+        setResolveError(storeErr || 'Failed to save holding. Please verify the quantity and price inputs.')
       }
     } catch {
       setResolveError('Network error while verifying cryptocurrency. Please check your connection and try again.')
@@ -175,14 +176,14 @@ export function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
     : localCandidates
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Add Asset to Portfolio">
       <GlassCard className="w-full max-w-lg my-8">
         <div className="flex justify-between items-center mb-6">
           <div>
             <div className="font-semibold text-xl text-slate-900 dark:text-white">Add Asset to Portfolio</div>
             <p className="text-xs text-slate-500 mt-0.5">Verified against real CoinGecko market assets</p>
           </div>
-          <button onClick={handleModalClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800">
+          <button onClick={handleModalClose} aria-label="Close dialog" className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800">
             <X className="h-5 w-5" />
           </button>
         </div>

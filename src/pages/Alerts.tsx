@@ -148,8 +148,9 @@ export default function Alerts() {
 
                     <button
                       onClick={() => handleToggle(alert.id, alert.triggered)}
-                      className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                      className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
                       title={alert.triggered ? 'Re-arm alert' : alert.enabled ? 'Pause alert' : 'Activate alert'}
+                      aria-label={alert.triggered ? `Re-arm ${alert.symbol} alert` : alert.enabled ? `Pause ${alert.symbol} alert` : `Activate ${alert.symbol} alert`}
                     >
                       {alert.enabled && !alert.triggered ? (
                         <ToggleRight className="h-6 w-6 text-emerald-600" />
@@ -160,8 +161,9 @@ export default function Alerts() {
 
                     <button
                       onClick={() => deleteAlert(alert.id)}
-                      className="text-slate-400 hover:text-rose-500 transition-colors"
+                      className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
                       title="Delete alert"
+                      aria-label={`Delete ${alert.symbol} alert`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

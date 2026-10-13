@@ -28,8 +28,12 @@ export const useFearGreedIndex = () => {
       }
       
       const parsedValue = parseInt(item.value, 10)
+      if (!Number.isFinite(parsedValue) || parsedValue < 0 || parsedValue > 100) {
+        throw new Error('Invalid Fear & Greed index numeric value')
+      }
+
       return {
-        value: Number.isFinite(parsedValue) ? parsedValue : 50,
+        value: parsedValue,
         value_classification: item.value_classification || 'Neutral',
         timestamp: item.timestamp || String(Math.floor(Date.now() / 1000)),
       }

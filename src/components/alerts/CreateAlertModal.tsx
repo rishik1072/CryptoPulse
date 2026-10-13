@@ -39,11 +39,11 @@ export function CreateAlertModal({ isOpen, onClose }: CreateAlertModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Create Alert">
       <GlassCard className="w-full max-w-md mx-4">
         <div className="flex justify-between mb-6">
           <div className="font-semibold text-xl">Create Alert</div>
-          <button onClick={onClose}><X /></button>
+          <button onClick={onClose} aria-label="Close dialog"><X className="h-5 w-5" /></button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

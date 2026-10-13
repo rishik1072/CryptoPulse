@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { supabase, onAuthStateChange, getSession } from '@/lib/supabase'
+import { supabase, onAuthStateChange, getSession, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuthStore } from '@/store/useAuthStore'
+import { usePortfolioStore } from '@/store/usePortfolioStore'
+import { useWatchlistStore } from '@/store/useWatchlistStore'
+import { useAlertStore } from '@/store/useAlertStore'
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { AuthContext } from '@/context/AuthContext'
 
@@ -14,16 +17,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser: setAuthUser, 
     setAuthenticated, 
     clearAuth,
+    initializeUserData,
   } = useAuthStore()
 
   useEffect(() => {
     let mounted = true
 
     const initializeAuth = async () => {
+      // If Supabase credentials are not configured yet, immediately resolve unauthenticated state
+      if (!isSupabaseConfigured()) {
+        if (mounted) {
+          setUser(null)
+          setSession(null)
+          setAuthUser(null)
+          setAuthenticated(false)
+          setLoading(false)
+          setInitialized(true)
+        }
+        return
+      }
+
       try {
-        const { data: { session: initialSession }, error } = await getSession()
+        // Enforce a 5-second timeout on getSession to prevent indefinite hanging on network/lock stalls
+        const sessionCheckPromise = getSession()
+        const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((resolve) => {
+          setTimeout(() => {
+            resolve({ data: { session: null }, error: new Error('Session resolution timeout (5s)') })
+          }, 5000)
+        })
+
+        const { data: { session: initialSession }, error } = await Promise.race([
+          sessionCheckPromise,
+          timeoutPromise,
+        ])
+
         if (error) {
-          console.warn('Initial session check error:', error)
+          console.warn('Initial session check note:', error.message || error)
         }
         
         if (mounted) {
@@ -32,11 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession(initialSession)
             setAuthUser(initialSession.user)
             setAuthenticated(true)
+
+            // User-scoped data hydration from database
+            usePortfolioStore.getState().initializeUser(initialSession.user.id)
+            useWatchlistStore.getState().initializeUser(initialSession.user.id)
+            useAlertStore.getState().initializeUser(initialSession.user.id)
+            initializeUserData(initialSession.user.id)
           } else {
             setUser(null)
             setSession(null)
             setAuthUser(null)
             setAuthenticated(false)
+            usePortfolioStore.getState().clearPortfolio()
+            useWatchlistStore.getState().clearWatchlist()
+            useAlertStore.getState().clearAlerts()
           }
           setLoading(false)
           setInitialized(true)
@@ -48,6 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(null)
           setAuthUser(null)
           setAuthenticated(false)
+          usePortfolioStore.getState().clearPortfolio()
+          useWatchlistStore.getState().clearWatchlist()
+          useAlertStore.getState().clearAlerts()
           setLoading(false)
           setInitialized(true)
         }
@@ -56,21 +97,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth()
 
-    // Establish single consistent auth state listener across the application
+    // Single consistent auth state listener across the application
     const { data: { subscription } } = onAuthStateChange(async (event, newSession) => {
       if (!mounted) return
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+      if (
+        event === 'INITIAL_SESSION' ||
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED'
+      ) {
         if (newSession?.user) {
           setUser(newSession.user)
           setSession(newSession)
           setAuthUser(newSession.user)
           setAuthenticated(true)
+
+          // User-scoped data hydration from database
+          usePortfolioStore.getState().initializeUser(newSession.user.id)
+          useWatchlistStore.getState().initializeUser(newSession.user.id)
+          useAlertStore.getState().initializeUser(newSession.user.id)
+          initializeUserData(newSession.user.id)
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
         setSession(null)
         clearAuth()
+        usePortfolioStore.getState().clearPortfolio()
+        useWatchlistStore.getState().clearWatchlist()
+        useAlertStore.getState().clearAlerts()
       }
       
       setLoading(false)
@@ -81,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [setAuthUser, setAuthenticated, clearAuth])
+  }, [setAuthUser, setAuthenticated, clearAuth, initializeUserData])
 
   const signOut = async () => {
     setLoading(true)
@@ -93,6 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setSession(null)
       clearAuth()
+      usePortfolioStore.getState().clearPortfolio()
+      useWatchlistStore.getState().clearWatchlist()
+      useAlertStore.getState().clearAlerts()
       setLoading(false)
     }
   }
@@ -105,10 +163,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(newSession)
         setAuthUser(newSession.user)
         setAuthenticated(true)
+        usePortfolioStore.getState().initializeUser(newSession.user.id)
+        useWatchlistStore.getState().initializeUser(newSession.user.id)
+        useAlertStore.getState().initializeUser(newSession.user.id)
+        initializeUserData(newSession.user.id)
       } else {
         setUser(null)
         setSession(null)
         clearAuth()
+        usePortfolioStore.getState().clearPortfolio()
+        useWatchlistStore.getState().clearWatchlist()
+        useAlertStore.getState().clearAlerts()
       }
     } catch (error) {
       console.error('Refresh session error:', error)

@@ -1,11 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.')
+const getEnvVar = (key: string): string => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+    return String(import.meta.env[key])
+  }
+  const globalProc = (globalThis as unknown as { process?: { env?: Record<string, string> } }).process
+  if (globalProc?.env?.[key]) {
+    return String(globalProc.env[key])
+  }
+  return ''
 }
+
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || 'https://placeholder-project-ref.supabase.co'
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy-signature-here'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -14,15 +21,48 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     flowType: 'pkce',
     storage: {
-      getItem: (key: string) => localStorage.getItem(key),
-      setItem: (key: string, value: string) => localStorage.setItem(key, value),
-      removeItem: (key: string) => localStorage.removeItem(key),
+      getItem: (key: string) => {
+        try {
+          return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null
+        } catch {
+          return null
+        }
+      },
+      setItem: (key: string, value: string) => {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem(key, value)
+        } catch {}
+      },
+      removeItem: (key: string) => {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.removeItem(key)
+        } catch {}
+      },
     },
   },
 })
 
+export const isSupabaseConfigured = (): boolean => {
+  const url = getEnvVar('VITE_SUPABASE_URL')
+  const key = getEnvVar('VITE_SUPABASE_ANON_KEY')
+  return Boolean(
+    url &&
+    !url.includes('placeholder-project-ref') &&
+    url.startsWith('https://') &&
+    key &&
+    !key.includes('dummy-signature') &&
+    key.length > 20
+  )
+}
+
 // Auth helpers
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: { user: null, session: null },
+      error: new Error('Supabase is not configured yet. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'),
+    }
+  }
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -36,6 +76,12 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 }
 
 export const signInWithEmail = async (email: string, password: string) => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: { user: null, session: null },
+      error: new Error('Supabase is not configured yet. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'),
+    }
+  }
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -44,10 +90,17 @@ export const signInWithEmail = async (email: string, password: string) => {
 }
 
 export const signInWithGoogle = async () => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: new Error('Supabase is not configured yet. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'),
+    }
+  }
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${origin}/auth/callback`,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
@@ -63,8 +116,9 @@ export const signOut = async () => {
 }
 
 export const resetPassword = async (email: string) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: `${origin}/reset-password`,
   })
   return { data, error }
 }
@@ -95,23 +149,47 @@ export const updateProfile = async (updates: { full_name?: string; avatar_url?: 
   return { data, error }
 }
 
+export const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+export const MAX_AVATAR_FILE_SIZE_BYTES = 2 * 1024 * 1024 // 2MB
+
 export const uploadAvatar = async (file: File, userId: string) => {
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${userId}/avatar.${fileExt}`
-  
+  if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    return { data: null, error: new Error('User must be authenticated to upload an avatar.') }
+  }
+
+  if (file.size > MAX_AVATAR_FILE_SIZE_BYTES) {
+    return { data: null, error: new Error('Avatar image must be smaller than 2MB.') }
+  }
+
+  const mimeType = file.type?.toLowerCase()
+  if (!mimeType || !ALLOWED_AVATAR_MIME_TYPES.includes(mimeType as (typeof ALLOWED_AVATAR_MIME_TYPES)[number])) {
+    return { data: null, error: new Error('Invalid image format. Allowed formats: JPEG, PNG, WebP.') }
+  }
+
+  // Derive normalized extension from validated MIME type
+  const extensionMap: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  }
+  const fileExt = extensionMap[mimeType] || 'jpg'
+  const sanitizedUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '')
+  const fileName = `${sanitizedUserId}/avatar.${fileExt}`
+
   const { error } = await supabase.storage
     .from('avatars')
     .upload(fileName, file, {
       cacheControl: '3600',
+      contentType: mimeType,
       upsert: true,
     })
-  
+
   if (error) return { data: null, error }
-  
+
   const { data: { publicUrl } } = supabase.storage
     .from('avatars')
     .getPublicUrl(fileName)
-  
+
   return { data: { publicUrl }, error: null }
 }
 

@@ -156,11 +156,41 @@ export default function Dashboard() {
               <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Market pulse</div>
               <div className="mt-3 flex items-end justify-between gap-3">
                 <div>
-                  <div className="text-3xl font-semibold tracking-[-0.03em] text-slate-900">{globalLoading ? <Skeleton className="h-8 w-24" /> : <AnimatedCounter value={global?.market_cap_change_percentage_24h_usd ?? 0} suffix="%" decimals={2} />}</div>
-                  <div className="mt-1 text-sm text-emerald-600">{globalLoading ? 'Updating…' : '24h market shift'}</div>
+                  <div className="text-3xl font-semibold tracking-[-0.03em] text-slate-900">
+                    {globalLoading ? (
+                      <Skeleton className="h-8 w-24" />
+                    ) : global?.market_cap_change_percentage_24h_usd != null ? (
+                      <AnimatedCounter value={global.market_cap_change_percentage_24h_usd} suffix="%" decimals={2} />
+                    ) : (
+                      <span className="text-slate-400 font-normal">—</span>
+                    )}
+                  </div>
+                  <div className={`mt-1 text-sm ${
+                    global?.market_cap_change_percentage_24h_usd == null
+                      ? 'text-slate-500'
+                      : global.market_cap_change_percentage_24h_usd >= 0
+                        ? 'text-emerald-600'
+                        : 'text-rose-500'
+                  }`}>
+                    {globalLoading ? 'Updating…' : global?.market_cap_change_percentage_24h_usd != null ? '24h market shift' : 'Shift unavailable'}
+                  </div>
                 </div>
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-                  {globalLoading ? 'Live' : 'Bullish bias'}
+                <div className={`rounded-2xl border px-3 py-2 text-xs font-medium ${
+                  globalLoading
+                    ? 'border-slate-200 bg-slate-50 text-slate-500'
+                    : global?.market_cap_change_percentage_24h_usd == null
+                      ? 'border-slate-200 bg-slate-50 text-slate-500'
+                      : global.market_cap_change_percentage_24h_usd >= 0
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-rose-200 bg-rose-50 text-rose-700'
+                }`}>
+                  {globalLoading
+                    ? 'Live'
+                    : global?.market_cap_change_percentage_24h_usd == null
+                      ? 'Unavailable'
+                      : global.market_cap_change_percentage_24h_usd >= 0
+                        ? 'Bullish bias'
+                        : 'Bearish shift'}
                 </div>
               </div>
             </div>
@@ -281,15 +311,21 @@ export default function Dashboard() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: 'Total Market Cap', value: (global?.total_market_cap?.usd ?? 0) / 1e12, prefix: '$', suffix: 'T', decimals: 2, color: 'text-slate-900' },
-              { label: '24h Volume', value: (global?.total_volume?.usd ?? 0) / 1e9, prefix: '$', suffix: 'B', decimals: 2, color: 'text-slate-900' },
-              { label: 'Active Coins', value: global?.active_cryptocurrencies ?? 0, decimals: 0, color: 'text-slate-900' },
-              { label: 'BTC Dominance', value: global?.market_cap_percentage?.btc ?? 0, suffix: '%', decimals: 1, color: 'text-violet-700' },
+              { label: 'Total Market Cap', rawValue: global?.total_market_cap?.usd, value: global?.total_market_cap?.usd ? global.total_market_cap.usd / 1e12 : null, prefix: '$', suffix: 'T', decimals: 2, color: 'text-slate-900' },
+              { label: '24h Volume', rawValue: global?.total_volume?.usd, value: global?.total_volume?.usd ? global.total_volume.usd / 1e9 : null, prefix: '$', suffix: 'B', decimals: 2, color: 'text-slate-900' },
+              { label: 'Active Coins', rawValue: global?.active_cryptocurrencies, value: global?.active_cryptocurrencies ?? null, decimals: 0, color: 'text-slate-900' },
+              { label: 'BTC Dominance', rawValue: global?.market_cap_percentage?.btc, value: global?.market_cap_percentage?.btc ?? null, suffix: '%', decimals: 1, color: 'text-violet-700' },
             ].map((item) => (
               <div key={item.label} className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
                 <div className="text-sm text-slate-500">{item.label}</div>
                 <div className={`mt-3 text-2xl font-semibold tracking-[-0.03em] ${item.color}`}>
-                  {globalLoading ? <Skeleton className="h-8 w-24" /> : <><AnimatedCounter value={item.value} prefix={item.prefix} suffix={item.suffix} decimals={item.decimals} /></>}
+                  {globalLoading ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : item.value !== null ? (
+                    <AnimatedCounter value={item.value} prefix={item.prefix} suffix={item.suffix} decimals={item.decimals} />
+                  ) : (
+                    <span className="text-slate-400 font-normal text-xl">—</span>
+                  )}
                 </div>
               </div>
             ))}
@@ -446,10 +482,14 @@ export default function Dashboard() {
 
             <div className="mt-6 flex flex-col items-center justify-center rounded-[24px] border border-slate-200 bg-slate-50/80 p-6 text-center">
               <div className="flex h-24 w-24 items-center justify-center rounded-full border border-violet-200 bg-white text-4xl font-semibold text-slate-900">
-                {fearGreedData?.value ?? 50}
+                {fearGreedData?.value != null ? fearGreedData.value : <span className="text-2xl text-slate-400 font-normal">—</span>}
               </div>
-              <div className="mt-4 text-xl font-semibold text-slate-900">{fearGreedData?.value_classification ?? 'Neutral'}</div>
-              <div className="mt-2 text-sm text-slate-500">Sentiment is being measured from the latest live index snapshot.</div>
+              <div className="mt-4 text-xl font-semibold text-slate-900">
+                {fearGreedData?.value_classification ?? 'Unavailable'}
+              </div>
+              <div className="mt-2 text-sm text-slate-500">
+                {fearGreedData ? 'Sentiment measured from the latest live Alternative.me index.' : 'Live sentiment index feed is currently unavailable.'}
+              </div>
             </div>
           </GlassCard>
         </SectionReveal>
@@ -470,7 +510,7 @@ export default function Dashboard() {
 
             <div className="mt-5 space-y-3">
               {news.length ? news.map((item) => (
-                <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="flex items-start justify-between gap-3 rounded-[18px] border border-slate-200 bg-slate-50/80 p-3 transition-all hover:border-violet-200 hover:bg-white">
+                <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="flex items-start justify-between gap-3 rounded-[18px] border border-slate-200 bg-slate-50/80 p-3 transition-all hover:border-violet-200 hover:bg-white">
                   <div>
                     <div className="font-medium text-slate-900">{item.title}</div>
                     <div className="mt-1 text-sm text-slate-500">{item.source}</div>

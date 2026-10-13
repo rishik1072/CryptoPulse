@@ -28,8 +28,11 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom')) {
               return 'vendor-react'
             }
-            if (id.includes('@clerk')) {
-              return 'vendor-clerk'
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase'
+            }
+            if (id.includes('@tanstack')) {
+              return 'vendor-query'
             }
             if (id.includes('lightweight-charts') || id.includes('recharts')) {
               return 'vendor-charts'

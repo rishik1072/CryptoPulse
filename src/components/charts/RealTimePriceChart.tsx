@@ -83,32 +83,39 @@ export const RealTimePriceChart = memo(({
     resizeObserver.observe(chartRef.current)
 
     return () => {
-      resizeObserver.disconnect()
-      chart.remove()
+      try {
+        resizeObserver.disconnect()
+        chart.remove()
+        chartInstance.current = null
+        seriesRef.current = null
+      } catch {
+        // Safe cleanup
+      }
     }
   }, [height, color])
 
-  // Efficiently append new price points
+  // Efficiently append new price points without duplicate timestamps
   useEffect(() => {
-    if (!currentPrice || !seriesRef.current) return
+    if (!currentPrice || !seriesRef.current || !Number.isFinite(currentPrice)) return
 
     const now = Math.floor(Date.now() / 1000) as Time
-    
-    // Maintain a rolling window of ~60 points
-    const newPoint: LineData = {
-      time: now,
-      value: currentPrice,
+    const points = dataPointsRef.current
+    const last = points.length > 0 ? points[points.length - 1] : null
+
+    if (last && Number(last.time) === Number(now)) {
+      last.value = currentPrice
+    } else {
+      points.push({ time: now, value: currentPrice })
+      if (points.length > 80) {
+        points.shift()
+      }
     }
 
-    dataPointsRef.current.push(newPoint)
-
-    // Keep last 80 points for performance
-    if (dataPointsRef.current.length > 80) {
-      dataPointsRef.current.shift()
+    try {
+      seriesRef.current.setData([...points])
+    } catch {
+      // Safe update
     }
-
-    // Update chart efficiently (no recreation)
-    seriesRef.current.setData([...dataPointsRef.current])
   }, [currentPrice])
 
   return (

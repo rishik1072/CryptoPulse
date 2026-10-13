@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Sparkles, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, Globe } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { supabase, formatAuthError, isSupabaseConfigured } from '@/lib/supabase'
 
 export default function SignUp() {
   const navigate = useNavigate()
@@ -86,12 +86,14 @@ export default function SignUp() {
       
       if (error) {
         console.error('Google OAuth error:', error)
-        setErrorLocal('Failed to initiate Google sign-up. Please try again.')
-        toast.error('Failed to initiate Google sign-up. Please try again.')
+        const msg = formatAuthError(error)
+        setErrorLocal(msg)
+        toast.error(msg)
       }
-    } catch {
-      setErrorLocal('Google sign-up failed. Please try again.')
-      toast.error('Google sign-up failed. Please try again.')
+    } catch (err) {
+      const msg = formatAuthError(err)
+      setErrorLocal(msg)
+      toast.error(msg)
     } finally {
       setIsGoogleLoading(false)
     }
@@ -114,6 +116,19 @@ export default function SignUp() {
 
         <GlassCard className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-6 shadow-premium backdrop-blur-xl sm:p-8">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(109,40,217,0.1),_transparent_60%)]" />
+
+          {/* Setup notice banner when credentials are not yet configured */}
+          {!isSupabaseConfigured() && (
+            <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-300">
+              <div className="flex items-center gap-2 font-medium text-amber-200">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>Supabase Configuration Required</span>
+              </div>
+              <p className="mt-1.5 leading-relaxed text-slate-300">
+                Set <code className="font-mono text-violet-300">VITE_SUPABASE_URL</code> and <code className="font-mono text-violet-300">VITE_SUPABASE_ANON_KEY</code> in your <code className="font-mono text-slate-200">.env</code> file to enable live authentication and user persistence.
+              </p>
+            </div>
+          )}
 
           {/* Error notifications */}
           {(error || errorLocal) && (

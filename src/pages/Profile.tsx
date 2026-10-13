@@ -116,7 +116,9 @@ export default function ProfilePage() {
             </div>
             <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
               <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Alerts</div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{alerts.length} active</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                {alerts.filter(a => a.enabled && !a.triggered).length} active
+              </div>
             </div>
           </div>
         </GlassCard>

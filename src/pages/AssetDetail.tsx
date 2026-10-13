@@ -27,6 +27,7 @@ import { useCryptoNews } from '@/services/news'
 import { TradeSimulatorModal } from '@/components/portfolio/TradeSimulatorModal'
 import { ApiError, apiRetryConfig, fetchJsonSafely } from '@/services/coingecko'
 import { resolveAssetPrice, resolveMarketVolume } from '@/services/priceResolver'
+import { sanitizeHtml } from '@/lib/sanitizer'
 
 interface CoinDetail {
   id: string
@@ -213,7 +214,11 @@ export default function AssetDetail() {
     const peak = points.reduce((highest, [, price]) => Math.max(highest, price), 0)
     const trough = points.reduce((lowest, [, price]) => Math.min(lowest, price), Number.POSITIVE_INFINITY)
 
-    return { change30d, peak, trough }
+    return {
+      change30d,
+      peak: Number.isFinite(peak) ? peak : 0,
+      trough: Number.isFinite(trough) ? trough : 0,
+    }
   }, [marketChart])
 
   const sentiment = useMemo(() => {
@@ -454,7 +459,7 @@ export default function AssetDetail() {
           </div>
           <div className="space-y-3">
             {news?.map((item) => (
-              <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="block rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10">
+              <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="block rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10">
                 <div className="text-sm font-medium text-white">{item.title}</div>
                 <div className="mt-2 text-xs uppercase tracking-[0.24em] text-slate-400">{item.source}</div>
               </a>
@@ -509,20 +514,24 @@ export default function AssetDetail() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              { label: '30D change', value: historical?.change30d ?? 0, suffix: '%', decimals: 2 },
-              { label: 'ATH', value: ath, prefix: '$', decimals: ath < 1 ? 4 : 2 },
-              { label: 'ATL', value: atl, prefix: '$', decimals: atl < 1 ? 4 : 2 },
-              { label: 'Current vs ATH', value: ath && currentPrice ? ((currentPrice / ath) * 100 - 100) : 0, suffix: '%', decimals: 2 },
+              { label: '30D change', value: historical?.change30d != null ? historical.change30d : null, suffix: '%', decimals: 2 },
+              { label: 'ATH', value: ath > 0 ? ath : null, prefix: '$', decimals: ath < 1 ? 4 : 2 },
+              { label: 'ATL', value: atl > 0 ? atl : null, prefix: '$', decimals: atl < 1 ? 4 : 2 },
+              { label: 'Current vs ATH', value: ath > 0 && currentPrice != null ? ((currentPrice / ath) * 100 - 100) : null, suffix: '%', decimals: 2 },
             ].map((item, index) => (
               <div key={index} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{item.label}</div>
                 <div className="mt-2 text-xl font-semibold text-white">
-                  <AnimatedCounter
-                    value={item.value}
-                    prefix={item.prefix}
-                    suffix={item.suffix}
-                    decimals={item.decimals}
-                  />
+                  {item.value !== null ? (
+                    <AnimatedCounter
+                      value={item.value}
+                      prefix={item.prefix}
+                      suffix={item.suffix}
+                      decimals={item.decimals}
+                    />
+                  ) : (
+                    <span className="text-slate-400 font-normal">—</span>
+                  )}
                 </div>
               </div>
             ))}
@@ -547,16 +556,22 @@ export default function AssetDetail() {
         <div className="mb-4 text-lg font-semibold tracking-tight">About {coin.name}</div>
         <div
           className="prose prose-invert max-w-none text-[15px] leading-7 text-slate-300"
-          dangerouslySetInnerHTML={{ __html: coin.description.en ? `${coin.description.en.slice(0, 900)}${coin.description.en.length > 900 ? '…' : ''}` : 'No description available.' }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizeHtml(
+              coin.description.en
+                ? `${coin.description.en.slice(0, 900)}${coin.description.en.length > 900 ? '…' : ''}`
+                : 'No description available.'
+            ),
+          }}
         />
         <div className="mt-8 flex flex-wrap gap-3">
           {coin.links.homepage[0] && (
-            <a href={coin.links.homepage[0]} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+            <a href={coin.links.homepage[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
               Website <ExternalLink className="h-3.5 w-3.5" />
             </a>
           )}
           {coin.links.repos_url.github[0] && (
-            <a href={coin.links.repos_url.github[0]} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
+            <a href={coin.links.repos_url.github[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
               GitHub
             </a>
           )}

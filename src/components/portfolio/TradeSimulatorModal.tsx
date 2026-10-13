@@ -119,19 +119,19 @@ export function TradeSimulatorModal({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [isOpen, step, onClose, handlePreview])
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!coinId) return
 
     if (mode === 'buy') {
       if (existingHolding) {
         const nextQuantity = existingHolding.quantity + quantity
         const nextAvgBuyPrice = (existingHolding.quantity * existingHolding.avgBuyPrice + quantity * price) / nextQuantity
-        updateHolding(existingHolding.id, {
+        await updateHolding(existingHolding.id, {
           quantity: nextQuantity,
           avgBuyPrice: nextAvgBuyPrice,
         })
       } else {
-        addHolding({
+        await addHolding({
           coinId,
           symbol: symbol.toUpperCase(),
           name,
@@ -146,9 +146,9 @@ export function TradeSimulatorModal({
 
       const nextQuantity = existingHolding.quantity - quantity
       if (nextQuantity <= 0) {
-        removeHolding(existingHolding.id)
+        await removeHolding(existingHolding.id)
       } else {
-        updateHolding(existingHolding.id, { quantity: nextQuantity })
+        await updateHolding(existingHolding.id, { quantity: nextQuantity })
       }
     }
 

@@ -1,290 +1,116 @@
-import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   BellRing,
-  ChevronRight,
-  LayoutDashboard,
-  Moon,
-  Search,
-  Settings,
-  Sparkles,
-  Star,
-  SunMedium,
-  TrendingUp,
-  Wallet,
-  ArrowLeft,
+  Crown,
+  LayoutGrid,
   Newspaper,
+  Star,
+  TrendingUp,
+  User,
+  Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/useUIStore'
-import { useAuthStore } from '@/store/useAuthStore'
-import { usePortfolioStore } from '@/store/usePortfolioStore'
-import { useLivePriceStore } from '@/store/useLivePriceStore'
-import { computePortfolioValuation } from '@/services/priceResolver'
-import { useMarketData, useCoinsMarketData, type CoinMarketData } from '@/services/coingecko'
-import { NotificationDropdown } from '@/components/ui/NotificationDropdown'
-import { ProfileMenu } from '@/components/ui/ProfileMenu'
 
 const navItems = [
-  { to: '/', label: 'Overview', icon: LayoutDashboard, hint: 'Daily snapshot' },
-  { to: '/markets', label: 'Markets', icon: TrendingUp, hint: 'Discover movers' },
-  { to: '/portfolio', label: 'Portfolio', icon: Wallet, hint: 'Balance view' },
-  { to: '/profile', label: 'Profile', icon: Sparkles, hint: 'Account view' },
-  { to: '/watchlist', label: 'Watchlist', icon: Star, hint: 'Your ideas' },
-  { to: '/alerts', label: 'Alerts', icon: BellRing, hint: 'Signal alerts' },
-  { to: '/news', label: 'News', icon: Newspaper, hint: 'Market intel' },
-  { to: '/settings', label: 'Settings', icon: Settings, hint: 'Preferences' },
+  { to: '/', label: 'Dashboard', subtitle: 'Market overview', icon: LayoutGrid },
+  { to: '/markets', label: 'Markets', subtitle: 'Browse & analyze', icon: TrendingUp },
+  { to: '/portfolio', label: 'Portfolio', subtitle: 'Track your assets', icon: Wallet },
+  { to: '/watchlist', label: 'Watchlist', subtitle: 'Your favorite coins', icon: Star },
+  { to: '/alerts', label: 'Alerts', subtitle: 'Price notifications', icon: BellRing },
+  { to: '/news', label: 'News', subtitle: 'Latest updates', icon: Newspaper },
+  { to: '/profile', label: 'Profile', subtitle: 'Account settings', icon: User },
 ]
 
-const workspaces = [
-  { id: 'personal' as const, label: 'Personal', subtitle: 'Your main desk', short: 'P' },
-  { id: 'research' as const, label: 'Research', subtitle: 'Idea lab', short: 'R' },
-  { id: 'institutional' as const, label: 'Institutional', subtitle: 'Team view', short: 'I' },
-]
+export function Sidebar() {
+  const { sidebarOpen, closeSidebar } = useUIStore()
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: value >= 100000 ? 0 : 2,
-  }).format(value)
-}
-
-interface SidebarInnerProps {
-  profileName: string
-  profileEmail: string
-}
-
-function SidebarInner({ profileName, profileEmail }: SidebarInnerProps) {
-  const { sidebarOpen, toggleSidebar, closeSidebar } = useUIStore()
-  const { preferences, updatePreferences } = useAuthStore()
-  const { holdings } = usePortfolioStore()
-  const { prices, connectionStatus } = useLivePriceStore()
-  const [workspace, setWorkspace] = useState<'personal' | 'research' | 'institutional'>('personal')
-  const isDark = preferences.theme === 'dark'
-
-  const holdingCoinIds = useMemo(() => holdings.map((h) => h.coinId).filter(Boolean), [holdings])
-  const { data: topMarkets = [] } = useMarketData(50)
-  const { data: specificMarkets = [] } = useCoinsMarketData(holdingCoinIds, topMarkets)
-
-  const marketDataMap = useMemo(() => {
-    const map: Record<string, CoinMarketData> = {}
-    for (const coin of topMarkets) {
-      map[coin.id.toLowerCase()] = coin
-      map[coin.symbol.toLowerCase()] = coin
-      map[coin.symbol.toUpperCase()] = coin
-    }
-    for (const coin of specificMarkets) {
-      map[coin.id.toLowerCase()] = coin
-      map[coin.symbol.toLowerCase()] = coin
-      map[coin.symbol.toUpperCase()] = coin
-    }
-    return map
-  }, [topMarkets, specificMarkets])
-
-  const totalBalance = useMemo(() => {
-    const { metrics } = computePortfolioValuation(holdings, prices, marketDataMap, connectionStatus)
-    return metrics.totalValue
-  }, [holdings, prices, marketDataMap, connectionStatus])
-
-  const initials = profileName
-    .split(' ')
-    .map((word) => word[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-
-  const openCommandPalette = () => {
-    window.dispatchEvent(new Event('open-command-palette'))
+  const handleNavClick = () => {
     if (window.innerWidth < 1024) {
       closeSidebar()
     }
   }
 
-  const toggleTheme = () => {
-    updatePreferences({ theme: isDark ? 'light' : 'dark' })
-  }
-
-  const activeWorkspace = workspaces.find((item) => item.id === workspace) ?? workspaces[0]
-
   return (
-    <motion.aside
-      animate={sidebarOpen ? { x: 0, width: 288 } : { x: 0, width: 88 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 34 }}
+    <aside
       className={cn(
-        'fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] border-r backdrop-blur-2xl lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-        isDark ? 'border-slate-800/80 bg-slate-950/90 text-slate-100' : 'border-slate-200/80 bg-white/90 text-slate-900'
+        'fixed inset-y-0 left-0 z-40 w-64 pt-16 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:pt-0',
+        'border-r border-white/[0.06] bg-[#070913] backdrop-blur-2xl transition-transform duration-300 ease-in-out',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}
     >
-      <div className="flex h-full flex-col p-3 sm:p-4">
-        <div className={cn('relative overflow-hidden rounded-[24px] border p-3', isDark ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-slate-50/90 shadow-sm')}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(109,40,217,0.18),_transparent_35%)]" />
-          <div className="relative">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className={`text-[10px] font-semibold uppercase tracking-[0.3em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Workspace</div>
-                <div className="mt-2 text-sm font-semibold">{activeWorkspace.label}</div>
-                <div className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{profileName}</div>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.04, rotate: -4 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={toggleSidebar}
-                className={`rounded-2xl p-2 transition-all ${isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-100'}`}
-                aria-label="Collapse sidebar"
+      <div className="flex h-full flex-col justify-between p-4 overflow-y-auto">
+        {/* Navigation Links */}
+        <nav className="space-y-1.5">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={handleNavClick}
+                end={item.to === '/'}
+                className="block"
               >
-                <ArrowLeft className="h-4 w-4" />
-              </motion.button>
-            </div>
-
-            <div className={`mt-4 flex items-center justify-between rounded-[18px] border px-3 py-3 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/80'}`}>
-              <div>
-                <div className={`text-[10px] uppercase tracking-[0.25em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Balance</div>
-                <div className="mt-1 text-sm font-semibold">{formatCurrency(totalBalance)}</div>
-              </div>
-              <div className="rounded-2xl bg-violet-500/15 p-2 text-violet-600">
-                <Sparkles className="h-4 w-4" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={`mt-4 rounded-[22px] border p-2 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50/80'}`}>
-          <div className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.24em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Workspace switcher</div>
-          <div className="space-y-1">
-            {workspaces.map((item) => (
-              <motion.button
-                key={item.id}
-                whileHover={{ x: 2, scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => setWorkspace(item.id)}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-2xl px-2.5 py-2 text-left transition-all',
-                  workspace === item.id
-                    ? isDark
-                      ? 'bg-violet-500/10 text-violet-300'
-                      : 'bg-violet-50 text-violet-700'
-                    : isDark
-                      ? 'text-slate-300 hover:bg-slate-800/80'
-                      : 'text-slate-600 hover:bg-white'
-                )}
-              >
-                <div className={cn('flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-semibold', workspace === item.id ? 'bg-violet-600 text-white' : isDark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600')}>
-                  {item.short}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{item.label}</div>
-                  <div className={`truncate text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.subtitle}</div>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        <nav className="mt-4 flex-1 space-y-1">
-          {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to} className="block">
-              {({ isActive }) => (
-                <motion.div
-                  whileHover={{ x: 2, scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    'flex items-center gap-3 rounded-2xl px-3 py-3 transition-all',
-                    isActive
-                      ? isDark
-                        ? 'bg-violet-500/12 text-violet-300'
-                        : 'bg-violet-50 text-violet-700'
-                      : isDark
-                        ? 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  )}
-                >
-                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-2xl', isActive ? 'bg-violet-600 text-white shadow-lg' : isDark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600')}>
-                    <item.icon className="h-4 w-4" />
-                  </div>
-                  <AnimatePresence mode="wait">
-                    {sidebarOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -6 }}
-                        className="min-w-0"
-                      >
-                        <div className="text-sm font-medium">{item.label}</div>
-                        <div className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.hint}</div>
-                      </motion.div>
+                {({ isActive }) => (
+                  <motion.div
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      'flex items-center gap-3.5 rounded-2xl px-3.5 py-3 transition-all',
+                      isActive
+                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30'
+                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-white'
                     )}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-            </NavLink>
-          ))}
+                  >
+                    <div
+                      className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors',
+                        isActive
+                          ? 'bg-white/15 text-white'
+                          : 'bg-white/[0.04] text-slate-400'
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold tracking-tight leading-tight">
+                        {item.label}
+                      </div>
+                      <div
+                        className={cn(
+                          'text-xs mt-0.5 truncate',
+                          isActive ? 'text-violet-100/80' : 'text-slate-500'
+                        )}
+                      >
+                        {item.subtitle}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </NavLink>
+            )
+          })}
         </nav>
 
-        <div className="mt-3 space-y-2">
-          <motion.button
-            whileHover={{ x: 2, scale: 1.01 }}
-            whileTap={{ scale: 0.985 }}
-            onClick={openCommandPalette}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-all',
-              isDark ? 'bg-slate-900/80 text-slate-200 hover:bg-slate-800/80' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            )}
-          >
-            <Search className="h-4 w-4" />
-            {sidebarOpen && <span className="flex-1 text-left">Search</span>}
-            {sidebarOpen && <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-medium text-slate-500">⌘K</span>}
-          </motion.button>
-
-          <motion.button
-            whileHover={{ x: 2, scale: 1.01 }}
-            whileTap={{ scale: 0.985 }}
-            onClick={toggleTheme}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-all',
-              isDark ? 'bg-slate-900/80 text-slate-200 hover:bg-slate-800/80' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            )}
-          >
-            {isDark ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {sidebarOpen && <span className="flex-1 text-left">{isDark ? 'Light mode' : 'Dark mode'}</span>}
-          </motion.button>
-        </div>
-
-        <div className={`mt-3 rounded-[20px] border p-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-white/80'}`}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-sky-500 text-sm font-semibold text-white">
-              {initials}
-            </div>
-            {sidebarOpen && (
-              <div className="min-w-0 flex-1">
-                <div className={`truncate text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{profileName}</div>
-                <div className={`truncate text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{profileEmail}</div>
-              </div>
-            )}
+        {/* Bottom "Upgrade to Pro" Card */}
+        <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#0E1326] p-4 text-center">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Crown className="h-5 w-5 fill-amber-400 text-amber-400" />
           </div>
-          {sidebarOpen && (
-            <div className="mt-3 flex items-center justify-between text-sm text-violet-600">
-              <span className="font-medium">Account</span>
-              <ChevronRight className="h-4 w-4" />
-            </div>
-          )}
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <NotificationDropdown />
-          <ProfileMenu />
+          <h4 className="text-sm font-semibold text-white">Upgrade to Pro</h4>
+          <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+            Get advanced insights, real-time alerts, and more.
+          </p>
+          <button
+            type="button"
+            className="mt-3.5 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 px-4 text-xs font-semibold text-white shadow-md shadow-violet-600/30 hover:opacity-95 transition-opacity"
+          >
+            Learn More
+          </button>
         </div>
       </div>
-    </motion.aside>
+    </aside>
   )
-}
-
-export function Sidebar() {
-  const { user } = useAuthStore()
-  const profileName = user?.name || 'Guest'
-  const profileEmail = user?.email || 'Sign in to sync'
-
-  return <SidebarInner profileName={profileName} profileEmail={profileEmail} />
 }

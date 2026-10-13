@@ -1,10 +1,17 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { useUIStore } from './useUIStore'
+import { useUIStore } from './useUIStore.ts'
+import { usePortfolioStore } from './usePortfolioStore.ts'
+import { useWatchlistStore } from './useWatchlistStore.ts'
+import { useAlertStore } from './useAlertStore.ts'
 import {
   getSession,
   signOut as supabaseSignOut,
   updateProfile as supabaseUpdateProfile,
+  updateUserProfile,
+  getUserProfile,
+  getUserPreferences,
+  updateUserPreferences,
   uploadAvatar,
   signInWithEmail,
   signUpWithEmail,
@@ -13,7 +20,7 @@ import {
   updatePassword as supabaseUpdatePassword,
   deleteAccount as supabaseDeleteAccount,
   formatAuthError,
-} from '@/lib/supabase'
+} from '../lib/supabase.ts'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export interface UserPreferences {
@@ -72,16 +79,18 @@ interface AuthState {
   deleteAccount: () => Promise<void>
   refreshSession: () => Promise<boolean>
   clearSessions: () => void
-  updatePreferences: (prefs: Partial<UserPreferences>) => void
+  updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void> | void
   resetPreferences: () => void
   addActivityLog: (action: string) => void
   uploadAvatar: (file: File) => Promise<string | null>
   signInWithGoogle: () => Promise<boolean>
+  initializeUserData: (userId: string) => Promise<void>
   
   // Internal sync methods for AuthProvider
   setUser: (user: SupabaseUser | null) => void
   setAuthenticated: (value: boolean) => void
   setLoading: (value: boolean) => void
+  setHydrated: (value: boolean) => void
   clearAuth: () => void
 }
 
@@ -127,6 +136,46 @@ export const useAuthStore = create<AuthState>()(
       activityLogs: [],
       hasTwoFactor: false,
       connectedGoogle: false,
+
+      initializeUserData: async (userId: string) => {
+        try {
+          const [profileRes, prefRes] = await Promise.all([
+            getUserProfile(userId),
+            getUserPreferences(userId),
+          ])
+
+          if (profileRes.data) {
+            const dbProf = profileRes.data
+            const currentUser = get().user
+            if (currentUser && currentUser.id === userId) {
+              set({
+                user: {
+                  ...currentUser,
+                  name: dbProf.full_name || currentUser.name,
+                  avatarUrl: dbProf.avatar_url || currentUser.avatarUrl,
+                  phone: dbProf.phone || currentUser.phone,
+                },
+              })
+            }
+          }
+
+          if (prefRes.data) {
+            const dbPref = prefRes.data
+            set((state) => ({
+              preferences: {
+                ...state.preferences,
+                currency: dbPref.currency || state.preferences.currency,
+                theme: (dbPref.theme === 'light' ? 'light' : 'dark') as 'dark' | 'light',
+                emailNotifications: dbPref.email_notifications ?? state.preferences.emailNotifications,
+                browserNotifications: dbPref.push_notifications ?? state.preferences.browserNotifications,
+                priceAlerts: dbPref.price_alerts ?? state.preferences.priceAlerts,
+              },
+            }))
+          }
+        } catch (err) {
+          console.warn('[AuthStore] Failed to load user profile or preferences from database:', err)
+        }
+      },
 
       signIn: async (email, password, options) => {
         set({ isLoading: true, error: null, success: null })
@@ -235,6 +284,11 @@ export const useAuthStore = create<AuthState>()(
           console.warn('Supabase signout failed, clearing local state:', e)
         }
         
+        // Scope state cleanup: wipe user holdings, watchlist, and alerts
+        usePortfolioStore.getState().clearPortfolio()
+        useWatchlistStore.getState().clearWatchlist()
+        useAlertStore.getState().clearAlerts()
+
         set({
           user: null,
           isAuthenticated: false,
@@ -320,6 +374,18 @@ export const useAuthStore = create<AuthState>()(
             return
           }
 
+          // Confirmed database persistence for profiles table
+          const { error: dbError } = await updateUserProfile(currentUser.id, {
+            full_name: updates.name ?? currentUser.name,
+            avatar_url: updates.avatarUrl ?? currentUser.avatarUrl,
+            phone: updates.phone ?? currentUser.phone,
+          })
+
+          if (dbError) {
+            set({ isLoading: false, error: formatAuthError(dbError) })
+            return
+          }
+
           const updatedUser = { ...currentUser, ...updates }
           const updatedLogs = [
             { id: createUserId(), action: 'Profile details updated', timestamp: new Date().toISOString() },
@@ -393,6 +459,18 @@ export const useAuthStore = create<AuthState>()(
             return
           }
 
+          usePortfolioStore.getState().clearPortfolio()
+          useWatchlistStore.getState().clearWatchlist()
+          useAlertStore.getState().clearAlerts()
+
+          try {
+            localStorage.removeItem(`cryptopulse-portfolio-${currentUser.id}`)
+            localStorage.removeItem(`cryptopulse-watchlist-${currentUser.id}`)
+            localStorage.removeItem(`cryptopulse-alerts-${currentUser.id}`)
+          } catch {
+            // Ignore
+          }
+
           set({
             user: null,
             isAuthenticated: false,
@@ -444,7 +522,7 @@ export const useAuthStore = create<AuthState>()(
         get().addActivityLog('Cleared all other active device sessions')
       },
 
-      updatePreferences: (prefs) =>
+      updatePreferences: (prefs) => {
         set((state) => {
           const nextPreferences = { ...state.preferences, ...prefs }
 
@@ -459,7 +537,21 @@ export const useAuthStore = create<AuthState>()(
           return {
             preferences: nextPreferences,
           }
-        }),
+        })
+
+        const currentUser = get().user
+        if (currentUser) {
+          updateUserPreferences(currentUser.id, {
+            email_notifications: prefs.emailNotifications,
+            push_notifications: prefs.browserNotifications,
+            price_alerts: prefs.priceAlerts,
+            theme: prefs.theme,
+            currency: prefs.currency,
+          }).catch((err) => {
+            console.warn('[AuthStore] Failed to update preferences in database:', err)
+          })
+        }
+      },
 
       resetPreferences: () => {
         set({ preferences: defaultPreferences })
@@ -489,7 +581,6 @@ export const useAuthStore = create<AuthState>()(
             set({ isLoading: false, error: formatAuthError(error) })
             return false
           }
-          // Browser will redirect to Google OAuth
           return true
         } catch (err) {
           set({ isLoading: false, error: formatAuthError(err) })
@@ -516,7 +607,7 @@ export const useAuthStore = create<AuthState>()(
             return data.publicUrl
           }
 
-          set({ isLoading: false })
+          set({ isLoading: false, error: 'Storage returned empty avatar URL.' })
           return null
         } catch (err) {
           set({ isLoading: false, error: formatAuthError(err) })
@@ -542,7 +633,14 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: value })
       },
 
+      setHydrated: (value: boolean) => {
+        set({ isHydrated: value })
+      },
+
       clearAuth: () => {
+        usePortfolioStore.getState().clearPortfolio()
+        useWatchlistStore.getState().clearWatchlist()
+        useAlertStore.getState().clearAlerts()
         set({
           user: null,
           isAuthenticated: false,
@@ -559,9 +657,18 @@ export const useAuthStore = create<AuthState>()(
         preferences: state.preferences,
         rememberMe: state.rememberMe,
       }),
-      onRehydrateStorage: () => () => {
-        useAuthStore.setState({ isHydrated: true })
-      },
     }
   )
 )
+
+// Safely synchronize hydration state after store instance creation
+if (useAuthStore.persist?.hasHydrated?.()) {
+  useAuthStore.setState({ isHydrated: true })
+} else if (useAuthStore.persist?.onFinishHydration) {
+  useAuthStore.persist.onFinishHydration(() => {
+    useAuthStore.setState({ isHydrated: true })
+  })
+} else {
+  // If persistence is unavailable (e.g. Node/SSR test environments), mark hydrated immediately
+  useAuthStore.setState({ isHydrated: true })
+}

@@ -210,12 +210,14 @@ export default function Watchlist() {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => togglePin(item.coinId)}
+                        aria-label={item.pinned ? `Unpin ${item.name}` : `Pin ${item.name} to top`}
                         className="rounded-xl p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
                       >
                         <Star className={`h-4 w-4 ${item.pinned ? 'fill-amber-400 text-amber-500' : 'text-slate-400'}`} />
                       </button>
                       <button 
                         onClick={() => removeFromWatchlist(item.coinId)}
+                        aria-label={`Remove ${item.name} from watchlist`}
                         className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -27,19 +27,20 @@ function LocalProfileMenu() {
     )
   }
 
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : 'P'
+
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((value) => !value)}
-        className={`flex items-center gap-2.5 rounded-2xl px-2 py-1.5 transition-all hover:scale-[1.01] ${isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-100'}`}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 font-bold text-sm text-white shadow-md shadow-violet-500/20 ring-2 ring-violet-500/30 hover:scale-105 transition-all"
+        aria-label="User account menu"
       >
-        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 ring-1 ring-white/20">
-          {avatarUrl ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" /> : <User className="h-4 w-4 text-white" />}
-        </div>
-        <div className="hidden text-left md:block">
-          <div className={`text-sm font-medium ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{displayName}</div>
-          <div className={`-mt-0.5 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{email}</div>
-        </div>
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={displayName} className="h-full w-full rounded-full object-cover" />
+        ) : (
+          initial
+        )}
       </button>
 
       <AnimatePresence>

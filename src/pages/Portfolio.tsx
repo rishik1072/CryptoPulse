@@ -7,13 +7,13 @@ import { computePortfolioValuation } from '@/services/priceResolver'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { AddAssetModal } from '@/components/portfolio/AddAssetModal'
-import { Plus, Trash2, ChevronRight, AlertTriangle, Radio } from 'lucide-react'
+import { Plus, Trash2, ChevronRight, AlertTriangle, AlertCircle, Radio, Loader2 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const COLORS = ['#7c3aed', '#2563eb', '#22c55e', '#f59e0b', '#ef4444', '#6366f1', '#0ea5e9', '#ec4899']
 
 export default function Portfolio() {
-  const { holdings, removeHolding } = usePortfolioStore()
+  const { holdings, removeHolding, isLoading, error } = usePortfolioStore()
   const { prices: livePrices, connectionStatus } = useLivePriceStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -73,6 +73,11 @@ export default function Portfolio() {
           <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 sm:text-base">
             <Radio className={`h-4 w-4 ${connectionStatus === 'connected' ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}`} />
             <span>Feed: {connectionStatus === 'connected' ? 'Live Binance' : connectionStatus === 'reconnecting' ? 'Reconnecting feed' : 'Offline / Polling'}</span>
+            {isLoading && (
+              <span className="flex items-center gap-1 text-xs text-violet-500 ml-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Syncing with DB...
+              </span>
+            )}
           </div>
         </div>
         <button
@@ -82,6 +87,17 @@ export default function Portfolio() {
           <Plus className="h-4 w-4" /> Add Asset
         </button>
       </div>
+
+      {/* Database error banner */}
+      {error && (
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs sm:text-sm text-rose-600 dark:text-rose-400">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <span className="font-semibold">Persistence Notice: </span>
+            {error}
+          </div>
+        </div>
+      )}
 
       {/* Incomplete valuation warning banner */}
       {isIncomplete && (
@@ -247,14 +263,22 @@ export default function Portfolio() {
 
           {filteredHoldings.length === 0 ? (
             <div className="px-8 py-16 text-center">
-              <div className="text-lg font-medium text-slate-900 dark:text-white">Your portfolio is empty</div>
-              <p className="mt-2 text-sm text-slate-500">Add your first asset to start tracking real-time performance.</p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="mt-5 rounded-2xl bg-slate-900 dark:bg-white dark:text-slate-950 px-5 py-2 text-sm text-white transition-all hover:bg-slate-800 cursor-pointer"
-              >
-                Add your first asset
-              </button>
+              <div className="text-lg font-medium text-slate-900 dark:text-white">
+                {holdings.length === 0 ? 'Your portfolio is empty' : 'No holdings match your search'}
+              </div>
+              <p className="mt-2 text-sm text-slate-500">
+                {holdings.length === 0
+                  ? 'Add your first asset to start tracking real-time performance.'
+                  : 'Try searching for another asset symbol or clear the search filter.'}
+              </p>
+              {holdings.length === 0 && (
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="mt-5 rounded-2xl bg-slate-900 dark:bg-white dark:text-slate-950 px-5 py-2 text-sm text-white transition-all hover:bg-slate-800 cursor-pointer"
+                >
+                  Add your first asset
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -357,7 +381,11 @@ export default function Portfolio() {
                             <Link to={`/asset/${holding.coinId}`} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-violet-600 dark:hover:bg-slate-800">
                               <ChevronRight className="h-4 w-4" />
                             </Link>
-                            <button onClick={() => removeHolding(holding.id)} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800 cursor-pointer">
+                            <button
+                              onClick={() => removeHolding(holding.id)}
+                              aria-label={`Remove ${holding.name} from portfolio`}
+                              className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800 cursor-pointer"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>

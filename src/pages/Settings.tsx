@@ -59,7 +59,7 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const handleProfileSave = () => {
+  const handleProfileSave = async () => {
     if (!displayName.trim()) {
       toast.error('Display name cannot be empty')
       return
@@ -68,8 +68,25 @@ export default function Settings() {
       toast.error('Please provide a valid email')
       return
     }
-    updateProfile({ name: displayName, email, phone })
-    toast.success('Profile details saved successfully!')
+    const toastId = toast.loading('Saving profile changes...')
+    await updateProfile({ name: displayName, email, phone })
+    const err = useAuthStore.getState().error
+    if (err) {
+      toast.error(err, { id: toastId })
+    } else {
+      toast.success('Profile details saved successfully!', { id: toastId })
+    }
+  }
+
+  const handlePresetSelect = async (presetUrl: string) => {
+    const toastId = toast.loading('Updating avatar...')
+    await updateProfile({ avatarUrl: presetUrl })
+    const err = useAuthStore.getState().error
+    if (err) {
+      toast.error(err, { id: toastId })
+    } else {
+      toast.success('Avatar updated successfully!', { id: toastId })
+    }
   }
 
   const handlePasswordSave = async () => {
@@ -96,19 +113,37 @@ export default function Settings() {
     }
   }
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('Image size must be smaller than 2MB')
-        return
+    if (!file) return
+
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedMimeTypes.includes(file.type.toLowerCase())) {
+      toast.error('Invalid image format. Only JPEG, PNG, and WebP are supported.')
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size must be smaller than 2MB')
+      return
+    }
+
+    const toastId = toast.loading('Uploading avatar to secure storage...')
+    try {
+      const publicUrl = await useAuthStore.getState().uploadAvatar(file)
+      if (publicUrl) {
+        toast.success('Profile photo updated successfully!', { id: toastId })
+      } else {
+        const authErr = useAuthStore.getState().error
+        toast.error(authErr || 'Failed to upload avatar to Supabase Storage.', { id: toastId })
       }
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        updateProfile({ avatarUrl: reader.result as string })
-        toast.success('Profile photo updated successfully!')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Avatar upload failed'
+      toast.error(msg, { id: toastId })
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
       }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -179,11 +214,6 @@ export default function Settings() {
       updatePreferences({ notifications: nextVal })
       toast.success(`System notifications ${nextVal ? 'enabled' : 'disabled'}`)
     }
-  }
-
-  const handlePresetSelect = (url: string) => {
-    updateProfile({ avatarUrl: url })
-    toast.success('Avatar updated successfully!')
   }
 
   const handleConnectGoogle = () => {
@@ -271,7 +301,8 @@ export default function Settings() {
                     type="file"
                     ref={fileInputRef}
                     onChange={handlePhotoUpload}
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-label="Upload profile photo"
                     className="hidden"
                   />
                 </div>

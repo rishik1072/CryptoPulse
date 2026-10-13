@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import {
+  fetchUserHoldings,
+  insertHoldingDb,
+  updateHoldingDb,
+  deleteHoldingDb,
+} from '../services/portfolioService.ts'
 
 export interface Holding {
   id: string
@@ -15,9 +20,13 @@ export interface Holding {
 
 interface PortfolioState {
   holdings: Holding[]
-  addHolding: (holding: Omit<Holding, 'id'>) => boolean
-  updateHolding: (id: string, updates: Partial<Holding>) => boolean
-  removeHolding: (id: string) => void
+  isLoading: boolean
+  error: string | null
+  userId: string | null
+  initializeUser: (userId: string) => Promise<void>
+  addHolding: (holding: Omit<Holding, 'id'>) => Promise<boolean>
+  updateHolding: (id: string, updates: Partial<Holding>) => Promise<boolean>
+  removeHolding: (id: string) => Promise<boolean>
   clearPortfolio: () => void
 }
 
@@ -29,78 +38,159 @@ function isValidPrice(price: unknown): price is number {
   return typeof price === 'number' && Number.isFinite(price) && price >= 0
 }
 
-export const usePortfolioStore = create<PortfolioState>()(
-  persist(
-    (set) => ({
-      holdings: [],
+function getCacheKey(userId: string): string {
+  return `cryptopulse-portfolio-${userId}`
+}
 
-      addHolding: (holding) => {
-        // Reject invalid quantities and prices to safeguard portfolio integrity
-        if (!isValidQuantity(holding.quantity)) {
-          console.warn('[PortfolioStore] Rejected holding with invalid quantity:', holding.quantity)
-          return false
-        }
+function loadFromUserCache(userId: string): Holding[] {
+  try {
+    const raw = localStorage.getItem(getCacheKey(userId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
-        if (!isValidPrice(holding.avgBuyPrice)) {
-          console.warn('[PortfolioStore] Rejected holding with invalid avgBuyPrice:', holding.avgBuyPrice)
-          return false
-        }
+function saveToUserCache(userId: string, holdings: Holding[]): void {
+  try {
+    localStorage.setItem(getCacheKey(userId), JSON.stringify(holdings))
+  } catch {
+    // Ignore storage quota errors
+  }
+}
 
-        if (!holding.symbol || typeof holding.symbol !== 'string') {
-          console.warn('[PortfolioStore] Rejected holding with invalid symbol:', holding.symbol)
-          return false
-        }
+export const usePortfolioStore = create<PortfolioState>()((set, get) => ({
+  holdings: [],
+  isLoading: false,
+  error: null,
+  userId: null,
 
-        const newHolding: Holding = {
-          ...holding,
-          symbol: holding.symbol.trim().toUpperCase(),
-          name: holding.name?.trim() || holding.symbol.trim().toUpperCase(),
-          quantity: holding.quantity,
-          avgBuyPrice: holding.avgBuyPrice,
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-        }
+  initializeUser: async (userId: string) => {
+    // Scoped hydration prevents cross-user dataset leakage
+    const cached = loadFromUserCache(userId)
+    set({ userId, holdings: cached, isLoading: true, error: null })
 
-        set((state) => ({
-          holdings: [...state.holdings, newHolding],
-        }))
-        return true
-      },
-
-      updateHolding: (id, updates) => {
-        if (updates.quantity !== undefined && !isValidQuantity(updates.quantity)) {
-          console.warn('[PortfolioStore] Rejected update with invalid quantity:', updates.quantity)
-          return false
-        }
-
-        if (updates.avgBuyPrice !== undefined && !isValidPrice(updates.avgBuyPrice)) {
-          console.warn('[PortfolioStore] Rejected update with invalid avgBuyPrice:', updates.avgBuyPrice)
-          return false
-        }
-
-        set((state) => ({
-          holdings: state.holdings.map((h) => {
-            if (h.id !== id) return h
-            return {
-              ...h,
-              ...updates,
-              symbol: updates.symbol ? updates.symbol.trim().toUpperCase() : h.symbol,
-            }
-          }),
-        }))
-        return true
-      },
-
-      removeHolding: (id) => {
-        set((state) => ({
-          holdings: state.holdings.filter((h) => h.id !== id),
-        }))
-      },
-
-      clearPortfolio: () => set({ holdings: [] }),
-    }),
-    {
-      name: 'cryptopulse-portfolio',
-      version: 1,
+    try {
+      const dbHoldings = await fetchUserHoldings(userId)
+      set({ holdings: dbHoldings, isLoading: false, error: null })
+      saveToUserCache(userId, dbHoldings)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to synchronize portfolio with database.'
+      set({ isLoading: false, error: message })
     }
-  )
-)
+  },
+
+  addHolding: async (holding) => {
+    if (!isValidQuantity(holding.quantity)) {
+      console.warn('[PortfolioStore] Rejected holding with invalid quantity:', holding.quantity)
+      set({ error: 'Quantity must be a positive finite number.' })
+      return false
+    }
+
+    if (!isValidPrice(holding.avgBuyPrice)) {
+      console.warn('[PortfolioStore] Rejected holding with invalid avgBuyPrice:', holding.avgBuyPrice)
+      set({ error: 'Price must be a valid non-negative number.' })
+      return false
+    }
+
+    if (!holding.symbol || typeof holding.symbol !== 'string') {
+      console.warn('[PortfolioStore] Rejected holding with invalid symbol:', holding.symbol)
+      set({ error: 'Valid cryptocurrency symbol is required.' })
+      return false
+    }
+
+    const { userId } = get()
+    if (!userId) {
+      set({ error: 'User must be authenticated to add holdings.' })
+      return false
+    }
+
+    set({ isLoading: true, error: null })
+
+    try {
+      const persisted = await insertHoldingDb(userId, {
+        ...holding,
+        symbol: holding.symbol.trim().toUpperCase(),
+        name: holding.name?.trim() || holding.symbol.trim().toUpperCase(),
+      })
+
+      const nextHoldings = [...get().holdings, persisted]
+      set({ holdings: nextHoldings, isLoading: false, error: null })
+      saveToUserCache(userId, nextHoldings)
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Database error while saving holding.'
+      set({ isLoading: false, error: message })
+      return false
+    }
+  },
+
+  updateHolding: async (id, updates) => {
+    if (updates.quantity !== undefined && !isValidQuantity(updates.quantity)) {
+      console.warn('[PortfolioStore] Rejected update with invalid quantity:', updates.quantity)
+      set({ error: 'Updated quantity must be positive and finite.' })
+      return false
+    }
+
+    if (updates.avgBuyPrice !== undefined && !isValidPrice(updates.avgBuyPrice)) {
+      console.warn('[PortfolioStore] Rejected update with invalid avgBuyPrice:', updates.avgBuyPrice)
+      set({ error: 'Updated price must be non-negative.' })
+      return false
+    }
+
+    const { userId, holdings } = get()
+    if (!userId) {
+      set({ error: 'User must be authenticated to update holdings.' })
+      return false
+    }
+
+    set({ isLoading: true, error: null })
+
+    try {
+      await updateHoldingDb(userId, id, updates)
+      const nextHoldings = holdings.map((h) => {
+        if (h.id !== id) return h
+        return {
+          ...h,
+          ...updates,
+          symbol: updates.symbol ? updates.symbol.trim().toUpperCase() : h.symbol,
+        }
+      })
+      set({ holdings: nextHoldings, isLoading: false, error: null })
+      saveToUserCache(userId, nextHoldings)
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Database error while updating holding.'
+      set({ isLoading: false, error: message })
+      return false
+    }
+  },
+
+  removeHolding: async (id) => {
+    const { userId, holdings } = get()
+    if (!userId) {
+      set({ error: 'User must be authenticated to remove holdings.' })
+      return false
+    }
+
+    set({ isLoading: true, error: null })
+
+    try {
+      await deleteHoldingDb(userId, id)
+      const nextHoldings = holdings.filter((h) => h.id !== id)
+      set({ holdings: nextHoldings, isLoading: false, error: null })
+      saveToUserCache(userId, nextHoldings)
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Database error while deleting holding.'
+      set({ isLoading: false, error: message })
+      return false
+    }
+  },
+
+  clearPortfolio: () => {
+    set({ holdings: [], userId: null, error: null, isLoading: false })
+  },
+}))
