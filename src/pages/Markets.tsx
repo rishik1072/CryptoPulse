@@ -181,7 +181,7 @@ export default function Markets() {
         name: t.item.name,
         symbol: t.item.symbol.toUpperCase(),
         change: `+${(Math.abs(t.item.data?.price_change_percentage_24h?.usd ?? 15 + idx * 3)).toFixed(1)}%`,
-        image: t.item.large || t.item.thumb,
+        image: t.item.small || '',
       }))
     }
     return items
