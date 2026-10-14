@@ -3,10 +3,11 @@ import { motion } from 'framer-motion'
 import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts'
 import type { ISeriesApi, CandlestickData, Time } from 'lightweight-charts'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
-import { useUIStore } from '@/store/useUIStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { useOHLCData } from '@/services/historical'
 import { ApiError } from '@/services/coingecko'
 import { AlertCircle, Loader2, RotateCcw } from 'lucide-react'
+import { RubberSegment } from '@/components/reactbits/RubberSegment'
 
 interface ProfessionalOHLCChartProps {
   coinId: string
@@ -34,8 +35,9 @@ export const ProfessionalOHLCChart = memo(({
   const candleSeries = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const lastCandleTime = useRef<number | null>(null)
 
-  const { theme } = useUIStore()
-  const isDark = theme === 'dark'
+  const { preferences } = useAuthStore()
+  const themeRef = useRef(preferences.theme)
+  themeRef.current = preferences.theme
 
   const { prices } = useLivePriceStore()
   const livePrice = prices[symbol.toUpperCase()] || prices[symbol]
@@ -43,13 +45,14 @@ export const ProfessionalOHLCChart = memo(({
   const days = TIMEFRAMES[timeframe] || 7
   const { data: ohlcData, isLoading, isError, error, refetch } = useOHLCData(coinId, days)
 
-  // Initialize chart
+  // Initialize chart once
   useEffect(() => {
     if (!chartRef.current) return
 
-    const bgColor = isDark ? '#0b1120' : '#ffffff'
-    const textColor = isDark ? '#94a3b8' : '#475569'
-    const gridColor = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(15, 23, 42, 0.05)'
+    const isCurrentlyDark = document.documentElement.classList.contains('dark') || themeRef.current === 'dark'
+    const bgColor = isCurrentlyDark ? '#0B0E14' : '#ffffff'
+    const textColor = isCurrentlyDark ? '#94A3B8' : '#64748B'
+    const gridColor = isCurrentlyDark ? 'rgba(38, 45, 56, 0.45)' : 'rgba(226, 232, 240, 0.8)'
 
     const chart = createChart(chartRef.current, {
       width: chartRef.current.clientWidth,
@@ -68,12 +71,12 @@ export const ProfessionalOHLCChart = memo(({
     })
 
     const candle = chart.addSeries(CandlestickSeries, {
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderUpColor: '#22c55e',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      upColor: '#00E676',
+      downColor: '#FF5252',
+      borderUpColor: '#00E676',
+      borderDownColor: '#FF5252',
+      wickUpColor: '#00E676',
+      wickDownColor: '#FF5252',
     })
 
     chartInstance.current = chart
@@ -96,15 +99,16 @@ export const ProfessionalOHLCChart = memo(({
         // Safe disposal
       }
     }
-  }, [height, isDark])
+  }, [height])
 
-  // Sync theme changes to existing chart instance dynamically
+  // Sync theme changes to existing chart instance dynamically without recreation
   useEffect(() => {
     if (!chartInstance.current) return
 
-    const bgColor = isDark ? '#0b1120' : '#ffffff'
-    const textColor = isDark ? '#94a3b8' : '#475569'
-    const gridColor = isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(15, 23, 42, 0.05)'
+    const isCurrentlyDark = preferences.theme === 'dark'
+    const bgColor = isCurrentlyDark ? '#0B0E14' : '#ffffff'
+    const textColor = isCurrentlyDark ? '#94A3B8' : '#64748B'
+    const gridColor = isCurrentlyDark ? 'rgba(38, 45, 56, 0.45)' : 'rgba(226, 232, 240, 0.8)'
 
     chartInstance.current.applyOptions({
       layout: {
@@ -116,7 +120,7 @@ export const ProfessionalOHLCChart = memo(({
         horzLines: { color: gridColor },
       },
     })
-  }, [isDark])
+  }, [preferences.theme])
 
   // Load and sanitize historical OHLC data
   useEffect(() => {
@@ -177,31 +181,18 @@ export const ProfessionalOHLCChart = memo(({
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }} className="relative">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4 px-1">
-        <div className="flex flex-wrap gap-1 text-sm">
-          {Object.keys(TIMEFRAMES).map((tf) => (
-            <button
-              key={tf}
-              onClick={() => setTimeframe(tf)}
-              className={`px-3.5 py-1 rounded-xl text-xs sm:text-sm font-medium transition-all ${
-                timeframe === tf
-                  ? isDark
-                    ? 'bg-white text-slate-950 shadow-sm'
-                    : 'bg-slate-900 text-white shadow-sm'
-                  : isDark
-                    ? 'text-slate-400 hover:bg-slate-800'
-                    : 'text-slate-600 hover:bg-slate-100'
-              }`}
-              aria-label={`Select ${tf} timeframe`}
-            >
-              {tf}
-            </button>
-          ))}
-        </div>
+        <RubberSegment
+          items={Object.keys(TIMEFRAMES)}
+          value={timeframe}
+          onChange={(newTf) => setTimeframe(newTf)}
+          aria-label="Chart timeframe selector"
+          size="sm"
+        />
 
         <button
           onClick={() => refetch()}
           title="Refresh candlestick data"
-          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-1 rounded-lg"
+          className="inline-flex items-center gap-1 text-xs text-[#94A3B8] hover:text-[#F0F4F8] p-1.5 rounded-lg hover:bg-[#1E232E] transition-colors cursor-pointer"
           aria-label="Refresh chart data"
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -209,47 +200,47 @@ export const ProfessionalOHLCChart = memo(({
         </button>
       </div>
 
-      <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/80" style={{ height }}>
+      <div className="relative w-full rounded-xl overflow-hidden border border-border bg-surface" style={{ height }}>
         <div ref={chartRef} className="h-full w-full" />
 
         {isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-slate-950/70 backdrop-blur-xs text-slate-600 dark:text-slate-300">
-            <Loader2 className="h-7 w-7 animate-spin text-violet-500 mb-2" />
-            <div className="text-sm font-medium">Loading candlestick data…</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/85 backdrop-blur-xs text-foreground">
+            <Loader2 className="h-7 w-7 animate-spin text-[#FFB300] mb-2" />
+            <div className="text-xs font-medium text-muted">Loading candlestick data…</div>
           </div>
         )}
 
         {isError && (!ohlcData || ohlcData.length === 0) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-950/90 backdrop-blur-xs p-6 text-center text-slate-600 dark:text-slate-300">
-            <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
-            <div className="text-sm font-semibold text-slate-900 dark:text-white">Historical OHLC data temporarily unavailable</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/90 backdrop-blur-xs p-6 text-center text-foreground">
+            <AlertCircle className="h-8 w-8 text-[#FFB300] mb-2" />
+            <div className="text-sm font-semibold text-foreground">Historical OHLC data temporarily unavailable</div>
+            <div className="text-xs text-muted max-w-sm mt-1">
               {error instanceof ApiError && error.isRateLimited
                 ? 'CoinGecko API rate limit reached (HTTP 429). The chart will auto-recover once cooldown expires.'
                 : error?.message || 'Failed to fetch historical candlestick prices.'}
             </div>
             <button
               onClick={() => refetch()}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-medium text-white dark:bg-white dark:text-slate-900"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer shadow-md shadow-[#FFB300]/15"
             >
-              <RotateCcw className="h-3 w-3" /> Retry
+              <RotateCcw className="h-3.5 w-3.5 text-slate-950" /> Retry
             </button>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
+            <div className="text-[11px] text-[#00E676] mt-2 font-mono">
               Live Binance price updates continue to stream in real-time
             </div>
           </div>
         )}
 
         {isError && ohlcData && ohlcData.length > 0 && (
-          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300 backdrop-blur-md">
-            <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-[#FFB300]/30 bg-[#FFB300]/10 px-2.5 py-1 text-xs text-[#FFB300] backdrop-blur-md">
+            <AlertCircle className="h-3.5 w-3.5 text-[#FFB300]" />
             <span>Cached historical data (stale)</span>
           </div>
         )}
 
         {!isLoading && !isError && ohlcData && ohlcData.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-slate-950/70 p-6 text-center text-slate-500">
-            <div className="text-sm font-medium">No candlestick records available for {timeframe} timeframe</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/85 p-6 text-center text-muted">
+            <div className="text-xs font-medium">No candlestick records available for {timeframe} timeframe</div>
           </div>
         )}
       </div>

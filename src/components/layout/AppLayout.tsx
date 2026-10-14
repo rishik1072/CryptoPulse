@@ -19,11 +19,11 @@ export function AppLayout() {
   }, [subscribeToLivePrices])
 
   return (
-    <div className="min-h-screen bg-[#070913] text-white">
+    <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors duration-200">
       <GlobalLoading />
       <Navbar />
 
-      <div className="flex">
+      <div className="flex flex-1 min-h-0">
         <Sidebar />
 
         <AnimatePresence>
@@ -40,7 +40,7 @@ export function AppLayout() {
           )}
         </AnimatePresence>
 
-        <main className="min-w-0 flex-1 px-4 sm:px-6 lg:px-8 py-6 overflow-hidden">
+        <main className="min-w-0 flex-1 px-4 sm:px-6 lg:px-8 py-5 overflow-hidden">
           <PageTransition>
             <Outlet />
           </PageTransition>

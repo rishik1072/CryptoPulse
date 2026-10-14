@@ -5,11 +5,13 @@ import { Menu, Search, Sparkles, Sun, Moon, WifiOff } from 'lucide-react'
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown'
 import { ProfileMenu } from '@/components/ui/ProfileMenu'
 import { Link } from 'react-router-dom'
+import { ShinyText } from '@/components/reactbits/ShinyText'
+import { switchTheme } from '@/lib/theme'
 
 export function Navbar() {
   const { toggleSidebar } = useUIStore()
   const { connectionStatus, lastUpdate } = useLivePriceStore()
-  const { preferences, updatePreferences } = useAuthStore()
+  const { preferences } = useAuthStore()
 
   const isDark = preferences.theme === 'dark'
 
@@ -18,38 +20,39 @@ export function Navbar() {
   }
 
   const toggleTheme = () => {
-    updatePreferences({ theme: isDark ? 'light' : 'dark' })
+    const nextTheme = isDark ? 'light' : 'dark'
+    switchTheme(nextTheme)
   }
 
   const isLive = connectionStatus === 'connected' && lastUpdate !== null
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#070913]/90 backdrop-blur-xl">
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+    <nav className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
+      <div className="flex h-14 sm:h-15 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Mobile Toggle & Brand Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleSidebar}
-            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-white/[0.05] hover:text-white lg:hidden"
+            className="rounded-lg p-1.5 text-[#94A3B8] transition-colors hover:bg-[#1E232E] hover:text-[#F0F4F8] lg:hidden"
             aria-label="Toggle sidebar"
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30 group-hover:scale-105 transition-transform">
-              <Sparkles className="h-5 w-5 text-white" />
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFB300] text-slate-950 shadow-sm group-hover:bg-[#FFA000] transition-colors">
+              <Sparkles className="h-4 w-4 text-slate-950" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight text-white font-sans">
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-bold tracking-tight text-[#F0F4F8] font-heading">
                   CryptoPulse
                 </span>
-                <span className="rounded bg-violet-600/30 border border-violet-500/40 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-300">
-                  PRO
+                <span className="rounded bg-[#FFB300]/10 border border-[#FFB300]/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                  <ShinyText text="PRO" speed={4} className="text-[#FFB300] font-bold" />
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400">Premium investing</div>
+              <div className="text-[10px] text-[#94A3B8] leading-tight">Market Intelligence</div>
             </div>
           </Link>
         </div>
@@ -59,46 +62,47 @@ export function Navbar() {
           <button
             type="button"
             onClick={openCommandPalette}
-            className="group relative flex w-full items-center rounded-full border border-white/[0.08] bg-[#0E1326] px-4 py-2 text-sm text-slate-400 transition-all hover:border-violet-500/40 hover:bg-[#121933] hover:text-slate-200"
+            className="group relative flex w-full items-center rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs text-[#94A3B8] transition-all hover:border-[#FFB300]/50 hover:bg-[#1E232E]/90 hover:text-[#F0F4F8]"
           >
-            <Search className="h-4 w-4 text-slate-400 group-hover:text-violet-400 transition-colors mr-2.5 shrink-0" />
-            <span className="truncate text-left text-xs sm:text-sm text-slate-400">
+            <Search className="h-3.5 w-3.5 text-[#94A3B8] group-hover:text-[#FFB300] transition-colors mr-2 shrink-0" />
+            <span className="truncate text-left text-xs text-[#94A3B8] group-hover:text-[#F0F4F8]">
               Search coins, symbols, or categories...
             </span>
-            <div className="ml-auto flex items-center rounded bg-slate-800/80 px-2 py-0.5 text-[11px] font-mono text-slate-400 border border-white/5">
+            <div className="ml-auto flex items-center rounded bg-[#151921] px-1.5 py-0.5 text-[10px] font-mono text-[#94A3B8] border border-[#262D38]">
               Ctrl K
             </div>
           </button>
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Live Feed Status Pill */}
           {isLive ? (
             <div
-              className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-medium text-emerald-400"
+              className="inline-flex items-center gap-1.5 rounded-md border border-[#00E676]/30 bg-[#00E676]/10 px-2.5 py-1 text-xs font-semibold text-[#00E676]"
               title="Streaming live ticks from Binance WebSocket"
             >
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00E676] animate-pulse" />
               <span>Live Feed</span>
             </div>
           ) : (
             <div
-              className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-400"
-              title="Connecting to Binance WebSocket..."
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-[#262D38] bg-[#1E232E] px-2.5 py-1 text-xs font-medium text-[#94A3B8]"
+              title={connectionStatus === 'connecting' ? 'Connecting to Binance WebSocket…' : 'WebSocket feed disconnected'}
             >
               <WifiOff className="h-3 w-3" />
-              <span>Live Feed</span>
+              <span>{connectionStatus === 'connecting' ? 'Connecting…' : 'Offline'}</span>
             </div>
           )}
 
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-[#0E1326] text-slate-300 hover:text-white hover:bg-[#151D36] transition"
-            aria-label="Toggle theme"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface-elevated text-muted hover:text-foreground hover:bg-surface transition-colors cursor-pointer"
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
           >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? <Sun className="h-3.5 w-3.5 text-accent" /> : <Moon className="h-3.5 w-3.5 text-accent" />}
           </button>
 
           {/* Notification Dropdown */}

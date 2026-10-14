@@ -102,51 +102,61 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -10 }}
             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-            className="relative mx-4 w-full max-w-[560px] overflow-hidden rounded-[28px] border border-white/10 bg-white/90 shadow-2xl backdrop-blur-xl"
+            className="relative mx-4 w-full max-w-[560px] overflow-hidden rounded-xl border border-border bg-surface text-foreground shadow-2xl backdrop-blur-xl"
           >
-            <div className="flex items-center gap-3 border-b border-slate-200/80 px-5 py-4">
-              <Search className="h-4 w-4 text-slate-500" />
+            <div className="flex items-center gap-3 border-b border-border bg-surface-elevated px-4 py-3.5">
+              <Search className="h-4 w-4 text-muted shrink-0" />
               <input
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search pages or actions..."
-                className="flex-1 bg-transparent text-lg text-slate-900 outline-none placeholder:text-slate-400"
+                className="flex-1 bg-transparent text-xs sm:text-sm text-foreground outline-none placeholder:text-muted/60"
               />
-              <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">ESC</div>
+              <div className="rounded bg-surface border border-border px-1.5 py-0.5 text-[10px] font-mono text-muted">
+                ESC
+              </div>
             </div>
 
-            <div className="max-h-[320px] overflow-auto p-2">
+            <div className="max-h-[320px] overflow-auto p-2 space-y-1">
               {filtered.length > 0 ? (
-                filtered.map((cmd, index) => (
-                  <motion.button
-                    key={`${cmd.label}-${index}`}
-                    layout
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ x: 2, scale: 1.005 }}
-                    whileTap={{ scale: 0.995 }}
-                    transition={{ duration: 0.16 }}
-                    onClick={() => handleSelect(cmd.path)}
-                    className={`group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors ${
-                      index === selectedIndex ? 'bg-violet-50 text-violet-700' : 'text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <cmd.icon className="h-4 w-4" />
-                    <span className="font-medium">{cmd.label}</span>
-                    {cmd.shortcut && <span className="ml-auto text-[10px] text-slate-400">{cmd.shortcut}</span>}
-                  </motion.button>
-                ))
+                filtered.map((cmd, index) => {
+                  const isSelected = index === selectedIndex
+                  return (
+                    <motion.button
+                      key={`${cmd.label}-${index}`}
+                      layout
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.16 }}
+                      onClick={() => handleSelect(cmd.path)}
+                      className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs transition-colors cursor-pointer border ${
+                        isSelected
+                          ? 'bg-[#FFB300]/15 text-[#FFB300] border-[#FFB300]/30 font-medium'
+                          : 'text-muted hover:bg-surface-elevated hover:text-foreground border-transparent'
+                      }`}
+                    >
+                      <cmd.icon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-[#FFB300]' : 'text-muted'}`} />
+                      <span className="font-medium">{cmd.label}</span>
+                      {cmd.shortcut && (
+                        <span className="ml-auto text-[10px] font-mono text-muted/60">{cmd.shortcut}</span>
+                      )}
+                    </motion.button>
+                  )
+                })
               ) : (
-                <div className="px-5 py-8 text-center text-sm text-slate-500">No results found</div>
+                <div className="px-4 py-8 text-center text-xs text-muted">No results found for "{query}"</div>
               )}
             </div>
 
-            <div className="flex justify-between border-t border-slate-200/80 px-5 py-3 text-[10px] text-slate-500">
+            <div className="flex justify-between border-t border-border bg-surface-elevated px-4 py-2.5 text-[11px] font-mono text-muted">
               <div>
-                Press <span className="font-mono">↑↓</span> to navigate
+                Press <span className="font-mono text-foreground">↑↓</span> to navigate
               </div>
-              <div>Enter to select</div>
+              <div>
+                Press <span className="font-mono text-foreground">↵</span> to select
+              </div>
             </div>
           </motion.div>
         </div>

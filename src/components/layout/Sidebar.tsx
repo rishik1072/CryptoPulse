@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import {
   BellRing,
   Crown,
@@ -12,6 +11,9 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/useUIStore'
+import { toast } from 'sonner'
+import { motion, useReducedMotion } from 'framer-motion'
+import { ShinyText } from '@/components/reactbits/ShinyText'
 
 const navItems = [
   { to: '/', label: 'Dashboard', subtitle: 'Market overview', icon: LayoutGrid },
@@ -32,17 +34,19 @@ export function Sidebar() {
     }
   }
 
+  const shouldReduceMotion = useReducedMotion()
+
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-40 w-64 pt-16 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:pt-0',
-        'border-r border-white/[0.06] bg-[#070913] backdrop-blur-2xl transition-transform duration-300 ease-in-out',
+        'fixed inset-y-0 left-0 z-40 w-60 pt-14 sm:pt-15 lg:sticky lg:top-15 lg:h-[calc(100vh-3.75rem)] lg:pt-0',
+        'border-r border-border bg-surface transition-transform duration-200 ease-in-out',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}
     >
-      <div className="flex h-full flex-col justify-between p-4 overflow-y-auto">
+      <div className="flex h-full flex-col justify-between p-3 overflow-y-auto">
         {/* Navigation Links */}
-        <nav className="space-y-1.5">
+        <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
             return (
@@ -51,43 +55,55 @@ export function Sidebar() {
                 to={item.to}
                 onClick={handleNavClick}
                 end={item.to === '/'}
-                className="block"
+                className="relative block"
               >
                 {({ isActive }) => (
-                  <motion.div
-                    whileHover={{ x: 2 }}
-                    whileTap={{ scale: 0.98 }}
+                  <div
                     className={cn(
-                      'flex items-center gap-3.5 rounded-2xl px-3.5 py-3 transition-all',
+                      'relative flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors',
                       isActive
-                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30'
-                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-white'
+                        ? 'text-foreground font-medium'
+                        : 'text-muted hover:text-foreground hover:bg-surface-elevated/60'
                     )}
                   >
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-sidebar-pill"
+                        className="absolute inset-0 rounded-lg bg-[#FFB300]/10 border border-[#FFB300]/30"
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : { type: 'spring', stiffness: 350, damping: 30 }
+                        }
+                      />
+                    )}
                     <div
                       className={cn(
-                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors',
+                        'relative z-10 flex h-7 w-7 items-center justify-center rounded-md transition-colors',
                         isActive
-                          ? 'bg-white/15 text-white'
-                          : 'bg-white/[0.04] text-slate-400'
+                          ? 'bg-[#FFB300]/20 text-[#FFB300]'
+                          : 'bg-surface-elevated text-muted'
                       )}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold tracking-tight leading-tight">
+                    <div className="relative z-10 min-w-0 flex-1">
+                      <div className={cn(
+                        'text-xs font-semibold tracking-tight leading-tight',
+                        isActive ? 'text-foreground' : 'text-muted'
+                      )}>
                         {item.label}
                       </div>
                       <div
                         className={cn(
-                          'text-xs mt-0.5 truncate',
-                          isActive ? 'text-violet-100/80' : 'text-slate-500'
+                          'text-[10px] truncate',
+                          isActive ? 'text-[#FFB300]/80' : 'text-muted'
                         )}
                       >
                         {item.subtitle}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
               </NavLink>
             )
@@ -95,17 +111,20 @@ export function Sidebar() {
         </nav>
 
         {/* Bottom "Upgrade to Pro" Card */}
-        <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#0E1326] p-4 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Crown className="h-5 w-5 fill-amber-400 text-amber-400" />
+        <div className="mt-4 rounded-xl border border-border bg-surface-elevated p-3 text-center">
+          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFB300]/15 text-[#FFB300] border border-[#FFB300]/25">
+            <Crown className="h-4 w-4 fill-[#FFB300] text-[#FFB300]" />
           </div>
-          <h4 className="text-sm font-semibold text-white">Upgrade to Pro</h4>
-          <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-            Get advanced insights, real-time alerts, and more.
+          <h4 className="text-xs font-semibold text-foreground">
+            <ShinyText text="CryptoPulse Pro" speed={5} className="font-semibold text-foreground" />
+          </h4>
+          <p className="mt-0.5 text-[11px] text-muted leading-snug">
+            Real-time execution, alerts, and market signals.
           </p>
           <button
             type="button"
-            className="mt-3.5 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 px-4 text-xs font-semibold text-white shadow-md shadow-violet-600/30 hover:opacity-95 transition-opacity"
+            onClick={() => toast.info('CryptoPulse Pro unlocks institutional feeds and unlimited alerts. All features are currently enabled in this preview session.')}
+            className="mt-2.5 w-full rounded-lg bg-[#FFB300] hover:bg-[#FFA000] py-1.5 px-3 text-xs font-semibold text-slate-950 shadow-sm transition-colors cursor-pointer"
           >
             Learn More
           </button>

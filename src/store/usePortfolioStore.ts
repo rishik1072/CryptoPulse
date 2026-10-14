@@ -5,6 +5,7 @@ import {
   updateHoldingDb,
   deleteHoldingDb,
 } from '../services/portfolioService.ts'
+import { getSession } from '../lib/supabase.ts'
 
 export interface Holding {
   id: string
@@ -24,6 +25,7 @@ interface PortfolioState {
   error: string | null
   userId: string | null
   initializeUser: (userId: string) => Promise<void>
+  retrySync: () => Promise<void>
   addHolding: (holding: Omit<Holding, 'id'>) => Promise<boolean>
   updateHolding: (id: string, updates: Partial<Holding>) => Promise<boolean>
   removeHolding: (id: string) => Promise<boolean>
@@ -79,6 +81,21 @@ export const usePortfolioStore = create<PortfolioState>()((set, get) => ({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to synchronize portfolio with database.'
       set({ isLoading: false, error: message })
+    }
+  },
+
+  retrySync: async () => {
+    let targetUserId = get().userId
+    if (!targetUserId) {
+      try {
+        const { data } = await getSession()
+        targetUserId = data?.session?.user?.id || null
+      } catch {
+        // Ignore auth session retrieval failure
+      }
+    }
+    if (targetUserId) {
+      await get().initializeUser(targetUserId)
     }
   },
 

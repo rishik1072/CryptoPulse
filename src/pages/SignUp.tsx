@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { Sparkles, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase, formatAuthError, isSupabaseConfigured } from '@/lib/supabase'
@@ -100,69 +99,67 @@ export default function SignUp() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#050816] p-6 text-slate-100 font-sans">
-      <div className="w-full max-w-[420px] space-y-6">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground font-sans">
+      <div className="w-full max-w-[400px] space-y-4">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-violet-600 to-sky-500 shadow-lg shadow-violet-500/20">
-            <Sparkles className="h-6 w-6 text-white" />
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFB300] text-slate-950 shadow-sm">
+            <Sparkles className="h-5 w-5 text-slate-950" />
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.03em] bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold tracking-tight text-[#F0F4F8] font-heading">
             CryptoPulse
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Your institutional-grade trading desk
+          <p className="mt-1 text-xs text-[#94A3B8]">
+            Create your cryptocurrency intelligence account
           </p>
         </div>
 
-        <GlassCard className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-6 shadow-premium backdrop-blur-xl sm:p-8">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(109,40,217,0.1),_transparent_60%)]" />
-
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-6 shadow-sm">
           {/* Setup notice banner when credentials are not yet configured */}
           {!isSupabaseConfigured() && (
-            <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3.5 text-xs text-amber-300">
-              <div className="flex items-center gap-2 font-medium text-amber-200">
+            <div className="mb-4 rounded-lg border border-[#FFB300]/30 bg-[#FFB300]/10 p-3 text-xs text-[#FFB300]">
+              <div className="flex items-center gap-2 font-medium text-[#FFB300]">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>Supabase Configuration Required</span>
               </div>
-              <p className="mt-1.5 leading-relaxed text-slate-300">
-                Set <code className="font-mono text-violet-300">VITE_SUPABASE_URL</code> and <code className="font-mono text-violet-300">VITE_SUPABASE_ANON_KEY</code> in your <code className="font-mono text-slate-200">.env</code> file to enable live authentication and user persistence.
+              <p className="mt-1 leading-relaxed text-[#F0F4F8] text-[11px]">
+                Set <code className="font-mono text-[#FFB300]">VITE_SUPABASE_URL</code> and <code className="font-mono text-[#FFB300]">VITE_SUPABASE_ANON_KEY</code> in <code className="font-mono text-[#F0F4F8]">.env</code> to connect your project.
               </p>
             </div>
           )}
 
           {/* Error notifications */}
           {(error || errorLocal) && (
-            <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-300 flex items-center gap-2">
+            <div className="mb-4 rounded-lg border border-[#FF5252]/30 bg-[#FF5252]/10 p-3 text-xs text-[#FF5252] flex items-center gap-2">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               {errorLocal || error}
             </div>
           )}
           {success && (
-            <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center gap-2">
+            <div className="mb-4 rounded-lg border border-[#00E676]/30 bg-[#00E676]/10 p-3 text-xs text-[#00E676] flex items-center gap-2">
               <CheckCircle className="h-4 w-4 flex-shrink-0" />
               {success}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label htmlFor="name" className="sr-only">Display name</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                 <input
                   id="name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Display name"
                   autoComplete="name"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-12 py-3 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  className="w-full rounded-lg border border-[#262D38] bg-[#0B0E14] pl-10 pr-3 py-2 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
                 />
               </div>
             </div>
             <div>
               <label htmlFor="email" className="sr-only">Email address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                 <input
                   id="email"
                   type="email"
@@ -170,14 +167,14 @@ export default function SignUp() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Email address"
                   autoComplete="email"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-12 py-3 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  className="w-full rounded-lg border border-[#262D38] bg-[#0B0E14] pl-10 pr-3 py-2 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
                 />
               </div>
             </div>
             <div>
               <label htmlFor="password" className="sr-only">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -185,22 +182,22 @@ export default function SignUp() {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Password (min 6 chars)"
                   autoComplete="new-password"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-12 py-3 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 pr-12"
+                  className="w-full rounded-lg border border-[#262D38] bg-[#0B0E14] pl-10 pr-10 py-2 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F0F4F8] p-0.5 cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div>
               <label htmlFor="confirm-password" className="sr-only">Confirm password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                 <input
                   id="confirm-password"
                   type={showPassword ? 'text' : 'password'}
@@ -208,14 +205,14 @@ export default function SignUp() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Confirm password"
                   autoComplete="new-password"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-12 py-3 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 pr-12"
+                  className="w-full rounded-lg border border-[#262D38] bg-[#0B0E14] pl-10 pr-3 py-2 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-2xl bg-white py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 active:scale-[0.99] disabled:opacity-50"
+              className="w-full rounded-lg bg-[#FFB300] hover:bg-[#FFA000] py-2.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
               disabled={isLoading}
             >
               {isLoading ? 'Creating account…' : 'Create Account'}
@@ -223,29 +220,29 @@ export default function SignUp() {
           </form>
 
           {/* Google OAuth Button */}
-          <div className="mt-6">
+          <div className="mt-4">
             <button
               type="button"
               onClick={handleGoogleSignUp}
               disabled={isGoogleLoading || isLoading}
-              className="w-full flex items-center justify-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-100 transition-all hover:bg-white/10 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-[#262D38] bg-[#0B0E14] hover:bg-[#1E232E] px-4 py-2.5 text-xs font-medium text-[#F0F4F8] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Globe className="h-5 w-5" />
-              {isGoogleLoading ? 'Connecting to Google…' : 'Continue with Google'}
+              <Globe className="h-4 w-4 text-[#94A3B8]" />
+              <span>{isGoogleLoading ? 'Connecting to Google…' : 'Continue with Google'}</span>
             </button>
           </div>
 
           {/* Form Mode Toggle */}
-          <div className="mt-6 text-center text-xs text-slate-400">
+          <div className="mt-5 text-center text-xs text-[#94A3B8]">
             Already have an account?{' '}
             <Link
               to="/sign-in"
-              className="font-semibold text-violet-400 hover:text-violet-300"
+              className="font-semibold text-[#FFB300] hover:text-[#FFA000] transition-colors"
             >
               Sign in
             </Link>
           </div>
-        </GlassCard>
+        </div>
       </div>
     </div>
   )

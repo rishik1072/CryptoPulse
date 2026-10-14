@@ -119,36 +119,83 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-### 4.2 Portfolio Table
+### 4.2 Portfolios & Holdings Tables
+> **Recommended:** Rather than running manual snippets, execute the complete migration scripts in order:
+> 1. `supabase/migrations/20240101000000_initial_schema.sql`
+> 2. `supabase/migrations/20240102000000_phase3_user_persistence.sql`
+
 ```sql
-CREATE TABLE public.portfolio (
+-- 1. Portfolios Table (Container for user holdings)
+CREATE TABLE public.portfolios (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL DEFAULT 'Main Portfolio',
+  description TEXT,
+  is_default BOOLEAN DEFAULT FALSE,
+  total_value DECIMAL(20, 8) DEFAULT 0,
+  total_cost DECIMAL(20, 8) DEFAULT 0,
+  total_pnl DECIMAL(20, 8) DEFAULT 0,
+  total_pnl_percent DECIMAL(10, 2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.portfolios ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own portfolios" ON public.portfolios
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own portfolios" ON public.portfolios
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own portfolios" ON public.portfolios
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own portfolios" ON public.portfolios
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE INDEX idx_portfolios_user_id ON public.portfolios(user_id);
+
+-- 2. Holdings Table (Individual positions queried by the frontend)
+CREATE TABLE public.holdings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  portfolio_id UUID NOT NULL REFERENCES public.portfolios(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   coin_id TEXT NOT NULL,
   symbol TEXT NOT NULL,
   name TEXT NOT NULL,
   quantity DECIMAL(30, 10) NOT NULL DEFAULT 0,
-  avg_buy_price DECIMAL(30, 10) NOT NULL DEFAULT 0,
+  average_cost DECIMAL(20, 8) NOT NULL DEFAULT 0,
+  current_price DECIMAL(20, 8) DEFAULT 0,
+  current_value DECIMAL(20, 8) DEFAULT 0,
+  unrealized_pnl DECIMAL(20, 8) DEFAULT 0,
+  unrealized_pnl_percent DECIMAL(10, 2) DEFAULT 0,
+  allocation_percent DECIMAL(10, 2) DEFAULT 0,
+  first_bought_at TIMESTAMPTZ,
+  image TEXT,
+  notes TEXT,
+  last_updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, coin_id)
+  UNIQUE(portfolio_id, coin_id)
 );
 
-ALTER TABLE public.portfolio ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.holdings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own portfolio" ON public.portfolio
+CREATE POLICY "Users can view own holdings" ON public.holdings
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own portfolio" ON public.portfolio
+CREATE POLICY "Users can insert own holdings" ON public.holdings
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update own portfolio" ON public.portfolio
-  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own holdings" ON public.holdings
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can delete own portfolio" ON public.portfolio
+CREATE POLICY "Users can delete own holdings" ON public.holdings
   FOR DELETE USING (auth.uid() = user_id);
 
-CREATE INDEX idx_portfolio_user_id ON public.portfolio(user_id);
+CREATE INDEX idx_holdings_user_id ON public.holdings(user_id);
+CREATE INDEX idx_holdings_portfolio_id ON public.holdings(portfolio_id);
 ```
 
 ### 4.3 Transactions Table

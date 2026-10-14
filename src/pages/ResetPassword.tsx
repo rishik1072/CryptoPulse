@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/store/useAuthStore'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { Sparkles, Lock, Eye, EyeOff, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -65,14 +64,14 @@ export default function ResetPassword() {
 
   if (isCheckingToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050816] p-6 text-slate-100 font-sans">
-        <div className="w-full max-w-[420px]">
-          <GlassCard className="border border-white/10 bg-slate-900/80 p-6 shadow-premium backdrop-blur-xl sm:p-8">
-            <div className="flex items-center justify-center py-12">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
-              <div className="ml-4 text-sm text-slate-400 font-medium">Verifying reset link...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#0B0E14] p-4 text-[#F0F4F8] font-sans">
+        <div className="w-full max-w-[400px]">
+          <div className="rounded-xl border border-[#262D38] bg-[#151921] p-8 text-center shadow-xl">
+            <div className="flex items-center justify-center py-6">
+              <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#FFB300] border-t-transparent" />
+              <div className="ml-3 text-xs text-[#94A3B8] font-medium">Verifying reset credentials…</div>
             </div>
-          </GlassCard>
+          </div>
         </div>
       </div>
     )
@@ -80,119 +79,123 @@ export default function ResetPassword() {
 
   if (!isValidToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050816] p-6 text-slate-100 font-sans">
-        <div className="w-full max-w-[420px]">
-          <GlassCard className="border border-white/10 bg-slate-900/80 p-6 shadow-premium backdrop-blur-xl sm:p-8">
-            <div className="text-center py-12">
-              <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
-              <h2 className="mt-4 text-xl font-semibold">Invalid or Expired Link</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                This password reset link is invalid or has expired. Please request a new one.
-              </p>
+      <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground font-sans">
+        <div className="w-full max-w-[400px]">
+          <div className="rounded-xl border border-[#262D38] bg-[#151921] p-6 text-center shadow-xl">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#FF5252]/10 text-[#FF5252] border border-[#FF5252]/20">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <h2 className="text-base font-semibold text-[#F0F4F8] font-heading">Invalid or Expired Link</h2>
+            <p className="mt-1.5 text-xs text-[#94A3B8] leading-relaxed">
+              This password reset link is invalid or has expired. Please request a new security link.
+            </p>
+            <div className="mt-5">
               <Link
                 to="/forgot-password"
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-violet-400 hover:text-violet-300"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-4 py-2 text-xs font-semibold text-slate-950 transition-colors shadow-md shadow-[#FFB300]/15"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Request New Link
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Request New Link</span>
               </Link>
             </div>
-          </GlassCard>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#050816] p-6 text-slate-100 font-sans">
-      <div className="w-full max-w-[420px] space-y-6">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground font-sans">
+      <div className="w-full max-w-[400px] space-y-4">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-violet-600 to-sky-500 shadow-lg shadow-violet-500/20">
-            <Sparkles className="h-6 w-6 text-white" />
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFB300] text-slate-950 font-bold shadow-md shadow-[#FFB300]/20">
+            <Sparkles className="h-5 w-5 text-slate-950" />
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.03em] bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold tracking-tight text-[#F0F4F8] font-heading">
             CryptoPulse
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Set your new password
+          <p className="mt-1 text-xs text-[#94A3B8]">
+            Set your new account password
           </p>
         </div>
 
-        <GlassCard className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-6 shadow-premium backdrop-blur-xl sm:p-8">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(109,40,217,0.1),_transparent_60%)]" />
-
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-6 shadow-xl">
           {(error || errorLocal) && (
-            <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-300 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <div className="mb-4 rounded-lg border border-[#FF5252]/20 bg-[#FF5252]/10 p-3 text-xs text-[#FF5252] flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
               {errorLocal || error}
             </div>
           )}
           {success && (
-            <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            <div className="mb-4 rounded-lg border border-[#00E676]/20 bg-[#00E676]/10 p-3 text-xs text-[#00E676] flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 shrink-0" />
               {success}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label htmlFor="password" className="sr-only">New password</label>
+              <label htmlFor="new-password" className="sr-only">
+                New password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                 <input
-                  id="password"
+                  id="new-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="New password (min 6 chars)"
                   autoComplete="new-password"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-12 py-3 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 pr-12"
+                  className="w-full rounded-lg border border-[#262D38] bg-[#0B0E14] pl-10 pr-10 py-2 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8]/60 focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F0F4F8] p-0.5"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div>
-              <label htmlFor="confirm-password" className="sr-only">Confirm new password</label>
+              <label htmlFor="confirm-new-password" className="sr-only">
+                Confirm new password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                 <input
-                  id="confirm-password"
+                  id="confirm-new-password"
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Confirm new password"
                   autoComplete="new-password"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-12 py-3 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 pr-12"
+                  className="w-full rounded-lg border border-[#262D38] bg-[#0B0E14] pl-10 pr-10 py-2 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8]/60 focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-2xl bg-white py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 active:scale-[0.99] disabled:opacity-50"
+              className="w-full rounded-lg bg-[#FFB300] hover:bg-[#FFA000] py-2.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer disabled:opacity-50 shadow-md shadow-[#FFB300]/15"
               disabled={isLoading}
             >
               {isLoading ? 'Updating password…' : 'Update Password'}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-slate-400">
+          <div className="mt-5 text-center text-xs text-[#94A3B8]">
             <Link
               to="/sign-in"
-              className="font-semibold text-violet-400 hover:text-violet-300"
+              className="font-medium text-[#FFB300] hover:text-[#FFA000] transition-colors"
             >
               Back to Sign In
             </Link>
           </div>
-        </GlassCard>
+        </div>
       </div>
     </div>
   )
-}
+}

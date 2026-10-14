@@ -1,18 +1,18 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import {
   Activity,
+  ArrowDownRight,
+  ArrowUpRight,
   BellRing,
   BriefcaseBusiness,
   ChevronRight,
   Compass,
-  Eye,
+  ExternalLink,
+  Flame,
   Newspaper,
   Plus,
   Star,
-  TrendingDown,
-  TrendingUp,
   Wallet,
 } from 'lucide-react'
 import { useGlobalData, useMarketData, useTrendingCoins, useCoinsMarketData, type CoinMarketData } from '@/services/coingecko'
@@ -23,23 +23,12 @@ import { useLivePriceStore } from '@/store/useLivePriceStore'
 import { useWatchlistStore } from '@/store/useWatchlistStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import { computePortfolioValuation, resolveAssetPrice } from '@/services/priceResolver'
-import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PriceChange } from '@/components/ui/PriceChange'
 import { LivePriceTracker } from '@/components/dashboard/LivePriceTracker'
-function SectionReveal({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  )
-}
+import { Sparkline } from '@/components/charts/Sparkline'
+import { AddAssetModal } from '@/components/portfolio/AddAssetModal'
+import { SpotlightCard } from '@/components/reactbits/SpotlightCard'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -50,18 +39,36 @@ function formatCurrency(value: number) {
   }).format(value)
 }
 
+function formatCompact(value: number, prefix = '', suffix = '') {
+  if (value >= 1e12) return `${prefix}${(value / 1e12).toFixed(2)}T${suffix}`
+  if (value >= 1e9) return `${prefix}${(value / 1e9).toFixed(2)}B${suffix}`
+  if (value >= 1e6) return `${prefix}${(value / 1e6).toFixed(2)}M${suffix}`
+  if (value >= 1e3) return `${prefix}${(value / 1e3).toFixed(2)}K${suffix}`
+  return `${prefix}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}${suffix}`
+}
+
 export default function Dashboard() {
   const { holdings } = usePortfolioStore()
-  const { prices: livePrices, connectionStatus } = useLivePriceStore()
+  const { prices: livePrices, connectionStatus, lastUpdate, latency } = useLivePriceStore()
   const { user } = useAuthStore()
   const { items: watchlistItems } = useWatchlistStore()
   const { data: globalData, isLoading: globalLoading } = useGlobalData()
-  const { data: marketData = [] } = useMarketData(50)
-  const { data: trendingData } = useTrendingCoins()
-  const { data: fearGreedData } = useFearGreedIndex()
-  const { data: news = [] } = useCryptoNews(5)
+  const { data: marketData = [], isLoading: marketLoading } = useMarketData(50)
+  const { data: trendingData, isLoading: trendingLoading } = useTrendingCoins()
+  const { data: fearGreedData, isLoading: fearGreedLoading } = useFearGreedIndex()
+  const { data: news = [], isLoading: newsLoading } = useCryptoNews(4)
 
-  const firstName = user?.name?.split(' ')[0] ?? 'Investor'
+  const [isAddAssetOpen, setIsAddAssetOpen] = useState(false)
+
+  // Only show personalized greeting when authenticated user has a non-empty name
+  const validUserName = user?.name?.trim() ? user.name.trim().split(' ')[0] : null
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  }, [])
 
   const global = globalData?.data
 
@@ -89,27 +96,30 @@ export default function Dashboard() {
   )
 
   const watchlistRows = useMemo(() => {
-    return watchlistItems
-      .slice(0, 4)
-      .map((item) => {
-        const resolved = resolveAssetPrice(item, livePrices, marketDataMap, connectionStatus)
-        return {
-          ...item,
-          price: resolved.price,
-          change: resolved.change24h,
-          source: resolved.source,
-          isUnavailable: resolved.isUnavailable,
-        }
-      })
+    return watchlistItems.slice(0, 4).map((item) => {
+      const resolved = resolveAssetPrice(item, livePrices, marketDataMap, connectionStatus)
+      return {
+        ...item,
+        price: resolved.price,
+        change: resolved.change24h,
+        source: resolved.source,
+        isUnavailable: resolved.isUnavailable,
+      }
+    })
   }, [watchlistItems, livePrices, marketDataMap, connectionStatus])
 
   const topMovers = useMemo(() => {
-    const gainers = [...marketData].filter((coin) => coin.price_change_percentage_24h > 0).sort((a, b) => b.price_change_percentage_24h - a.price_change_percentage_24h).slice(0, 4)
-    const losers = [...marketData].filter((coin) => coin.price_change_percentage_24h < 0).sort((a, b) => a.price_change_percentage_24h - b.price_change_percentage_24h).slice(0, 4)
+    const gainers = [...marketData]
+      .filter((coin) => (coin.price_change_percentage_24h ?? 0) > 0)
+      .sort((a, b) => b.price_change_percentage_24h - a.price_change_percentage_24h)
+      .slice(0, 4)
+    const losers = [...marketData]
+      .filter((coin) => (coin.price_change_percentage_24h ?? 0) < 0)
+      .sort((a, b) => a.price_change_percentage_24h - b.price_change_percentage_24h)
+      .slice(0, 4)
     return { gainers, losers }
   }, [marketData])
 
-  // Get recent assets from localStorage outside of useMemo to avoid side effects
   const getRecentAssetIds = () => {
     if (typeof window === 'undefined') return []
     try {
@@ -123,464 +133,596 @@ export default function Dashboard() {
   const recentAssets = useMemo(() => {
     const recentIds = getRecentAssetIds()
     if (recentIds.length === 0) return marketData.slice(0, 4)
-    
     const matched = marketData.filter((coin) => recentIds.includes(coin.id))
     return matched.length ? matched.slice(0, 4) : marketData.slice(0, 4)
   }, [marketData])
 
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 18) return 'Good afternoon'
-    return 'Good evening'
-  }, [])
+  // Verifiable, factual market pulse derived purely from active market data
+  const marketPulse = useMemo(() => {
+    const shift24h = global?.market_cap_change_percentage_24h_usd
+    const btcDom = global?.market_cap_percentage?.btc
+
+    if (!marketData.length) {
+      return {
+        isPositive: false,
+        breadthText: 'Connecting to market stream…',
+        narrative: 'Awaiting upstream market data synchronization.',
+      }
+    }
+
+    const advancing = marketData.filter((c) => (c.price_change_percentage_24h ?? 0) > 0).length
+    const declining = marketData.filter((c) => (c.price_change_percentage_24h ?? 0) < 0).length
+    const total = marketData.length
+    const isPositive = (shift24h ?? 0) >= 0
+
+    let narrative = ''
+    if (shift24h != null) {
+      const dir = shift24h >= 0 ? 'expanded' : 'contracted'
+      narrative = `Total cryptocurrency market cap has ${dir} ${Math.abs(shift24h).toFixed(2)}% in the last 24h with ${advancing} of ${total} monitored assets advancing.`
+      if (btcDom != null) {
+        narrative += ` Bitcoin dominance is at ${btcDom.toFixed(1)}%.`
+      }
+    } else {
+      narrative = `Market breadth shows ${advancing} of ${total} tracked assets advancing against ${declining} declining.`
+    }
+
+    return {
+      isPositive,
+      breadthText: `${advancing} advancing · ${declining} declining`,
+      narrative,
+    }
+  }, [global, marketData])
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <SectionReveal>
-        <GlassCard className="relative overflow-hidden border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(109,40,217,0.12),_transparent_38%),linear-gradient(135deg,_#ffffff_0%,_#f8fafc_100%)] p-6 sm:p-8 lg:p-10">
-          <div className="relative z-10 grid gap-6 lg:grid-cols-[1.25fr_0.7fr] lg:items-end">
-            <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-violet-700">
-                Live market &bull; {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </div>
-              <h1 className="text-balance text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl">
-                {greeting}, {firstName}.
-              </h1>
-              <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-                Track momentum, review movers, and act on opportunities from one calm workspace.
-              </p>
-            </div>
+    <div className="space-y-4 sm:space-y-5">
+      {/* 1. HEADER & GREETING */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#262D38] pb-3.5">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F0F4F8]">Market Overview</h1>
+          {validUserName ? (
+            <p className="mt-0.5 text-xs text-[#94A3B8]">
+              {greeting}, {validUserName}. Real-time cryptocurrency market intelligence and execution monitoring.
+            </p>
+          ) : (
+            <p className="mt-0.5 text-xs text-[#94A3B8]">
+              Real-time cryptocurrency market intelligence and execution monitoring.
+            </p>
+          )}
+        </div>
 
-            <div className="rounded-[24px] border border-slate-200/80 bg-white/80 p-5 text-sm text-slate-600 shadow-sm backdrop-blur">
-              <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Market pulse</div>
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <div>
-                  <div className="text-3xl font-semibold tracking-[-0.03em] text-slate-900">
-                    {globalLoading ? (
-                      <Skeleton className="h-8 w-24" />
-                    ) : global?.market_cap_change_percentage_24h_usd != null ? (
-                      <AnimatedCounter value={global.market_cap_change_percentage_24h_usd} suffix="%" decimals={2} />
-                    ) : (
-                      <span className="text-slate-400 font-normal">—</span>
-                    )}
-                  </div>
-                  <div className={`mt-1 text-sm ${
-                    global?.market_cap_change_percentage_24h_usd == null
-                      ? 'text-slate-500'
-                      : global.market_cap_change_percentage_24h_usd >= 0
-                        ? 'text-emerald-600'
-                        : 'text-rose-500'
-                  }`}>
-                    {globalLoading ? 'Updating…' : global?.market_cap_change_percentage_24h_usd != null ? '24h market shift' : 'Shift unavailable'}
-                  </div>
-                </div>
-                <div className={`rounded-2xl border px-3 py-2 text-xs font-medium ${
-                  globalLoading
-                    ? 'border-slate-200 bg-slate-50 text-slate-500'
-                    : global?.market_cap_change_percentage_24h_usd == null
-                      ? 'border-slate-200 bg-slate-50 text-slate-500'
-                      : global.market_cap_change_percentage_24h_usd >= 0
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                        : 'border-rose-200 bg-rose-50 text-rose-700'
-                }`}>
-                  {globalLoading
-                    ? 'Live'
-                    : global?.market_cap_change_percentage_24h_usd == null
-                      ? 'Unavailable'
-                      : global.market_cap_change_percentage_24h_usd >= 0
-                        ? 'Bullish bias'
-                        : 'Bearish shift'}
-                </div>
-              </div>
-            </div>
+        {/* Compact market status and timestamp */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] px-2.5 py-1">
+            {connectionStatus === 'connected' ? (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00E676] animate-pulse" />
+                <span className="font-semibold text-[#00E676]">Binance Live</span>
+                <span className="font-mono text-[11px] text-[#94A3B8]">({latency}ms)</span>
+              </>
+            ) : connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#FFB300] animate-pulse" />
+                <span className="font-medium text-[#FFB300]">Reconnecting…</span>
+              </>
+            ) : (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#FF5252]" />
+                <span className="font-medium text-[#FF5252]">Feed Offline</span>
+              </>
+            )}
           </div>
-        </GlassCard>
-      </SectionReveal>
 
-      {/* Real-time Binance WebSocket Ticker Bar */}
-      <SectionReveal delay={0.04}>
-        <LivePriceTracker />
-      </SectionReveal>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <SectionReveal delay={0.07}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-slate-500">Portfolio Summary</div>
-                  {portfolioMetrics.isIncomplete && (
-                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                      Partial
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
-                  {globalLoading ? (
-                    <Skeleton className="h-8 w-28" />
-                  ) : portfolioMetrics.valuedCount > 0 ? (
-                    formatCurrency(portfolioMetrics.totalValue)
-                  ) : holdings.length === 0 ? (
-                    '$0.00'
-                  ) : (
-                    <span className="text-slate-400 text-2xl font-normal">—</span>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-violet-50 p-2 text-violet-700">
-                <BriefcaseBusiness className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
-              <Activity className="h-4 w-4" />
-              {portfolioRows.length
-                ? `${portfolioMetrics.valuedCount} of ${portfolioRows.length} positions priced`
-                : 'No positions yet'}
-            </div>
-          </GlassCard>
-        </SectionReveal>
-
-        <SectionReveal delay={0.1}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-slate-500">Today&apos;s Profit / Loss</div>
-                  {portfolioMetrics.isIncomplete && (
-                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                      Priced Only
-                    </span>
-                  )}
-                </div>
-                <div className={`mt-2 text-3xl font-semibold tracking-[-0.03em] ${portfolioMetrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {globalLoading ? (
-                    <Skeleton className="h-8 w-28" />
-                  ) : portfolioMetrics.valuedCount > 0 ? (
-                    `${portfolioMetrics.totalProfit >= 0 ? '+' : ''}${formatCurrency(portfolioMetrics.totalProfit)}`
-                  ) : holdings.length === 0 ? (
-                    '$0.00'
-                  ) : (
-                    <span className="text-slate-400 text-2xl font-normal">—</span>
-                  )}
-                </div>
-              </div>
-              <div className={`rounded-2xl p-2 ${portfolioMetrics.totalProfit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
-                {portfolioMetrics.totalProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
-              </div>
-            </div>
-            <div className="mt-4 text-sm text-slate-500">
-              {portfolioMetrics.valuedCount > 0
-                ? `${portfolioMetrics.totalRoi >= 0 ? '+' : ''}${portfolioMetrics.totalRoi.toFixed(1)}% ROI across priced holdings`
-                : 'Awaiting verified market prices'}
-            </div>
-          </GlassCard>
-        </SectionReveal>
-
-        <SectionReveal delay={0.13}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-slate-500">Net Worth</div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
-                  {globalLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(portfolioMetrics.totalValue)}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
-                <Wallet className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="mt-4 text-sm text-slate-500">
-              Updated from live market data and your portfolio balances.
-            </div>
-          </GlassCard>
-        </SectionReveal>
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] px-2.5 py-1 text-[#94A3B8] font-mono text-[11px]">
+            <span>Sync:</span>
+            <span className="text-[#F0F4F8]">
+              {lastUpdate
+                ? new Date(lastUpdate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                : 'Connecting…'}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <SectionReveal delay={0.16}>
-        <GlassCard className="card-sheen">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="text-lg font-semibold tracking-tight text-slate-900">Market Overview</div>
-              <div className="text-sm text-slate-500">High-level conditions across the crypto market</div>
-            </div>
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
-              Live • CoinGecko
-            </div>
+      {/* 2. MARKET SUMMARY: Compact row of 4 primary market metrics */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* Metric 1: Total Market Cap */}
+        <SpotlightCard className="p-3.5 sm:p-4 shadow-sm" title="Aggregate global cryptocurrency market capitalization across all tracked assets">
+          <div className="flex items-center justify-between text-xs text-[#94A3B8]">
+            <span>Total Market Cap</span>
+            {global?.market_cap_change_percentage_24h_usd != null && (
+              <span className={`inline-flex items-center font-mono font-medium text-[11px] ${global.market_cap_change_percentage_24h_usd >= 0 ? 'text-[#00E676]' : 'text-[#FF5252]'}`}>
+                {global.market_cap_change_percentage_24h_usd >= 0 ? (
+                  <ArrowUpRight className="h-3 w-3 mr-0.5" />
+                ) : (
+                  <ArrowDownRight className="h-3 w-3 mr-0.5" />
+                )}
+                {Math.abs(global.market_cap_change_percentage_24h_usd).toFixed(2)}%
+              </span>
+            )}
           </div>
+          <div className="mt-1.5 text-lg sm:text-xl font-bold font-mono tracking-tight text-[#F0F4F8] tabular-nums">
+            {globalLoading ? (
+              <Skeleton className="h-6 w-24" />
+            ) : global?.total_market_cap?.usd ? (
+              formatCompact(global.total_market_cap.usd, '$')
+            ) : (
+              <span className="text-[#94A3B8] font-normal">—</span>
+            )}
+          </div>
+          <div className="mt-1 text-[11px] text-[#94A3B8]">24h aggregate valuation</div>
+        </SpotlightCard>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: 'Total Market Cap', rawValue: global?.total_market_cap?.usd, value: global?.total_market_cap?.usd ? global.total_market_cap.usd / 1e12 : null, prefix: '$', suffix: 'T', decimals: 2, color: 'text-slate-900' },
-              { label: '24h Volume', rawValue: global?.total_volume?.usd, value: global?.total_volume?.usd ? global.total_volume.usd / 1e9 : null, prefix: '$', suffix: 'B', decimals: 2, color: 'text-slate-900' },
-              { label: 'Active Coins', rawValue: global?.active_cryptocurrencies, value: global?.active_cryptocurrencies ?? null, decimals: 0, color: 'text-slate-900' },
-              { label: 'BTC Dominance', rawValue: global?.market_cap_percentage?.btc, value: global?.market_cap_percentage?.btc ?? null, suffix: '%', decimals: 1, color: 'text-violet-700' },
-            ].map((item) => (
-              <div key={item.label} className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
-                <div className="text-sm text-slate-500">{item.label}</div>
-                <div className={`mt-3 text-2xl font-semibold tracking-[-0.03em] ${item.color}`}>
-                  {globalLoading ? (
-                    <Skeleton className="h-8 w-24" />
-                  ) : item.value !== null ? (
-                    <AnimatedCounter value={item.value} prefix={item.prefix} suffix={item.suffix} decimals={item.decimals} />
-                  ) : (
-                    <span className="text-slate-400 font-normal text-xl">—</span>
-                  )}
+        {/* Metric 2: 24h Volume */}
+        <SpotlightCard className="p-3.5 sm:p-4 shadow-sm" title="24-hour total cryptocurrency spot and derivative trading volume">
+          <div className="text-xs text-[#94A3B8]">24H Volume</div>
+          <div className="mt-1.5 text-lg sm:text-xl font-bold font-mono tracking-tight text-[#F0F4F8] tabular-nums">
+            {globalLoading ? (
+              <Skeleton className="h-6 w-24" />
+            ) : global?.total_volume?.usd ? (
+              formatCompact(global.total_volume.usd, '$')
+            ) : (
+              <span className="text-[#94A3B8] font-normal">—</span>
+            )}
+          </div>
+          <div className="mt-1 text-[11px] text-[#94A3B8]">Global turnover volume</div>
+        </SpotlightCard>
+
+        {/* Metric 3: BTC Dominance */}
+        <SpotlightCard className="p-3.5 sm:p-4 shadow-sm" title="Percentage of global crypto market capitalization held by Bitcoin">
+          <div className="flex items-center justify-between text-xs text-[#94A3B8]">
+            <span>BTC Dominance</span>
+            <span className="text-[10px] font-mono text-[#FFB300] uppercase tracking-wider">Share</span>
+          </div>
+          <div className="mt-1.5 text-lg sm:text-xl font-bold font-mono tracking-tight text-[#F0F4F8] tabular-nums">
+            {globalLoading ? (
+              <Skeleton className="h-6 w-16" />
+            ) : global?.market_cap_percentage?.btc ? (
+              `${global.market_cap_percentage.btc.toFixed(1)}%`
+            ) : (
+              <span className="text-[#94A3B8] font-normal">—</span>
+            )}
+          </div>
+          <div className="mt-1 text-[11px] text-[#94A3B8]">
+            {global?.active_cryptocurrencies ? `${global.active_cryptocurrencies.toLocaleString()} active coins` : 'Market share'}
+          </div>
+        </SpotlightCard>
+
+        {/* Metric 4: Fear & Greed Index */}
+        <SpotlightCard className="p-3.5 sm:p-4 shadow-sm" title="Alternative.me Fear and Greed sentiment index">
+          <div className="flex items-center justify-between text-xs text-[#94A3B8]">
+            <span>Fear &amp; Greed</span>
+            <span className="text-[10px] font-mono text-[#94A3B8] uppercase">Alternative.me</span>
+          </div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-lg sm:text-xl font-bold font-mono tracking-tight text-[#F0F4F8] tabular-nums">
+              {fearGreedLoading ? (
+                <Skeleton className="h-6 w-12" />
+              ) : fearGreedData?.value != null ? (
+                `${fearGreedData.value}`
+              ) : (
+                <span className="text-[#94A3B8] font-normal">—</span>
+              )}
+            </span>
+            {fearGreedData?.value_classification && (
+              <span className={`text-xs font-semibold ${
+                fearGreedData.value_classification.toLowerCase().includes('greed')
+                  ? 'text-[#00E676]'
+                  : fearGreedData.value_classification.toLowerCase().includes('fear')
+                    ? 'text-[#FF5252]'
+                    : 'text-[#FFB300]'
+              }`}>
+                {fearGreedData.value_classification}
+              </span>
+            )}
+          </div>
+          <div className="mt-1 text-[11px] text-[#94A3B8]">Market sentiment indicator</div>
+        </SpotlightCard>
+      </div>
+
+      {/* 5. MARKET PULSE: Compact analytical summary explaining movement using verifiable data */}
+      <div className="rounded-xl border border-[#262D38] bg-[#151921] px-4 py-3 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 text-xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`h-2 w-2 rounded-full shrink-0 ${marketPulse.isPositive ? 'bg-[#00E676]' : 'bg-[#FF5252]'}`} />
+          <span className="font-bold text-[11px] uppercase font-mono tracking-wider text-[#F0F4F8] shrink-0">
+            Market Pulse:
+          </span>
+          <p className="text-[#94A3B8] leading-normal truncate sm:text-clip">
+            {marketPulse.narrative}
+          </p>
+        </div>
+        <div className="shrink-0 flex items-center gap-2 text-[11px] font-mono">
+          <span className="rounded-md bg-[#1E232E] border border-[#262D38] px-2.5 py-1 text-[#F0F4F8]">
+            {marketPulse.breadthText}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. LIVE MARKET: Binance WebSocket streaming prices */}
+      <LivePriceTracker />
+
+      {/* 4. IMPORTANT MARKET MOVEMENTS: Top Gainers, Top Losers, and Trending Coins */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Top Gainers */}
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#00E676]" />
+              <h2 className="text-sm font-bold text-[#F0F4F8]">Top Gainers (24H)</h2>
+            </div>
+            <Link to="/markets" className="text-[11px] font-medium text-[#FFB300] hover:text-[#FFA000] transition-colors">
+              All markets →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {marketLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
                 </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      </SectionReveal>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <SectionReveal delay={0.18}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900">Watchlist</div>
-                <div className="text-sm text-slate-500">Your active ideas and movers</div>
-              </div>
-              <Link to="/watchlist" className="inline-flex items-center gap-1 text-sm font-medium text-violet-700">
-                View all <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {watchlistRows.length ? watchlistRows.map((item) => (
-                <div key={item.coinId} className="flex items-center justify-between rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-2xl bg-white p-2 shadow-sm">
-                      <Star className="h-4 w-4 text-amber-500" />
+              ))
+            ) : topMovers.gainers.length ? (
+              topMovers.gainers.map((coin) => (
+                <Link
+                  key={coin.id}
+                  to={`/asset/${coin.id}`}
+                  className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2 transition-colors hover:bg-[#1E232E] hover:border-[#FFB300]/30"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img src={coin.image} alt="" className="h-5 w-5 rounded-full" />
+                    <span className="font-semibold text-xs text-[#F0F4F8] truncate">{coin.name}</span>
+                    <span className="text-[10px] uppercase font-mono text-[#94A3B8]">{coin.symbol}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono text-xs font-semibold text-[#F0F4F8] tabular-nums">
+                      ${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 4 : 2 })}
                     </div>
-                    <div>
-                      <div className="font-medium text-slate-900">{item.name}</div>
-                      <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{item.symbol}</div>
+                    <PriceChange value={coin.price_change_percentage_24h} />
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="text-center py-4 text-xs text-[#94A3B8]">No gainers recorded</div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Losers */}
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#FF5252]" />
+              <h2 className="text-sm font-bold text-[#F0F4F8]">Top Losers (24H)</h2>
+            </div>
+            <Link to="/markets" className="text-[11px] font-medium text-[#FFB300] hover:text-[#FFA000] transition-colors">
+              All markets →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {marketLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))
+            ) : topMovers.losers.length ? (
+              topMovers.losers.map((coin) => (
+                <Link
+                  key={coin.id}
+                  to={`/asset/${coin.id}`}
+                  className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2 transition-colors hover:bg-[#1E232E] hover:border-[#FFB300]/30"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img src={coin.image} alt="" className="h-5 w-5 rounded-full" />
+                    <span className="font-semibold text-xs text-[#F0F4F8] truncate">{coin.name}</span>
+                    <span className="text-[10px] uppercase font-mono text-[#94A3B8]">{coin.symbol}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono text-xs font-semibold text-[#F0F4F8] tabular-nums">
+                      ${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 4 : 2 })}
+                    </div>
+                    <PriceChange value={coin.price_change_percentage_24h} />
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="text-center py-4 text-xs text-[#94A3B8]">No losers recorded</div>
+            )}
+          </div>
+        </div>
+
+        {/* Trending on CoinGecko */}
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4 text-[#FFB300]" />
+              <h2 className="text-sm font-bold text-[#F0F4F8]">Trending Search Flow</h2>
+            </div>
+            <span className="text-[10px] font-mono text-[#94A3B8] uppercase">CoinGecko</span>
+          </div>
+          <div className="space-y-2">
+            {trendingLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))
+            ) : trendingData?.coins?.length ? (
+              trendingData.coins.slice(0, 4).map((coin) => (
+                <Link
+                  key={coin.item.id}
+                  to={`/asset/${coin.item.id}`}
+                  className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2 transition-colors hover:bg-[#1E232E] hover:border-[#FFB300]/30"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img src={coin.item.small} alt="" className="h-5 w-5 rounded-full" />
+                    <span className="font-semibold text-xs text-[#F0F4F8] truncate">{coin.item.name}</span>
+                    <span className="text-[10px] uppercase font-mono text-[#94A3B8]">{coin.item.symbol}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono text-xs font-semibold text-[#F0F4F8] tabular-nums">
+                      {formatCurrency(coin.item.data.price)}
+                    </div>
+                    <div className={`text-[11px] font-mono tabular-nums ${coin.item.data.price_change_percentage_24h.usd >= 0 ? 'text-[#00E676]' : 'text-[#FF5252]'}`}>
+                      {coin.item.data.price_change_percentage_24h.usd >= 0 ? '+' : ''}{coin.item.data.price_change_percentage_24h.usd.toFixed(1)}%
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-mono text-sm font-medium text-slate-900">
-                      {item.price !== null ? formatCurrency(item.price) : <span className="text-slate-400 font-normal">—</span>}
+                </Link>
+              ))
+            ) : (
+              <div className="text-center py-4 text-xs text-[#94A3B8]">No trending data available</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 6. PORTFOLIO OVERVIEW WHEN AVAILABLE */}
+      {holdings.length > 0 ? (
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 sm:p-5 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#262D38] pb-3">
+            <div className="flex items-center gap-2">
+              <BriefcaseBusiness className="h-4 w-4 text-[#FFB300]" />
+              <h2 className="text-sm font-bold text-[#F0F4F8]">Portfolio Overview</h2>
+              {portfolioMetrics.isIncomplete && (
+                <span className="rounded bg-[#FFB300]/10 border border-[#FFB300]/25 px-1.5 py-0.5 text-[10px] font-mono text-[#FFB300]">
+                  Partial live pricing
+                </span>
+              )}
+            </div>
+            <Link to="/portfolio" className="inline-flex items-center gap-1 text-xs font-semibold text-[#FFB300] hover:text-[#FFA000] transition-colors">
+              Open Portfolio Desk <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-[#262D38] bg-[#1E232E]/70 p-3">
+              <div className="text-xs text-[#94A3B8]">Total Portfolio Value</div>
+              <div className="mt-1 text-xl font-bold font-mono tracking-tight text-[#F0F4F8] tabular-nums">
+                {formatCurrency(portfolioMetrics.totalValue)}
+              </div>
+              <div className="mt-1 text-[11px] text-[#94A3B8]">
+                {portfolioMetrics.valuedCount} of {portfolioRows.length} positions evaluated
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#262D38] bg-[#1E232E]/70 p-3">
+              <div className="text-xs text-[#94A3B8]">Total Unrealized P&amp;L</div>
+              <div className={`mt-1 text-xl font-bold font-mono tracking-tight tabular-nums ${portfolioMetrics.totalProfit >= 0 ? 'text-[#00E676]' : 'text-[#FF5252]'}`}>
+                {portfolioMetrics.totalProfit >= 0 ? '+' : ''}{formatCurrency(portfolioMetrics.totalProfit)}
+              </div>
+              <div className="mt-1 text-[11px] font-mono tabular-nums text-[#94A3B8]">
+                {portfolioMetrics.totalRoi >= 0 ? '+' : ''}{portfolioMetrics.totalRoi.toFixed(2)}% net return
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#262D38] bg-[#1E232E]/70 p-3">
+              <div className="text-xs text-[#94A3B8]">Active Allocations</div>
+              <div className="mt-1 text-xl font-bold font-mono tracking-tight text-[#F0F4F8] tabular-nums">
+                {holdings.length} {holdings.length === 1 ? 'Asset' : 'Assets'}
+              </div>
+              <div className="mt-1 text-[11px] text-[#94A3B8]">
+                Tracked across verified live data feeds
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-[#FFB300]/10 border border-[#FFB300]/25 p-2 text-[#FFB300] shrink-0">
+              <Wallet className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-[#F0F4F8]">Portfolio Monitoring</div>
+              <p className="text-[11px] text-[#94A3B8]">Add asset holdings to compute real-time valuations, P&amp;L, and ROI.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsAddAssetOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Asset
+            </button>
+            <Link
+              to="/portfolio"
+              className="inline-flex items-center gap-1 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] hover:bg-[#262D38] transition-colors"
+            >
+              Portfolio Desk
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 7. WATCHLIST ACTIVITY & RELEVANT NEWS */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        {/* Watchlist Activity */}
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3 border-b border-[#262D38] pb-2.5">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-[#FFB300]" />
+              <h2 className="text-sm font-bold text-[#F0F4F8]">Watchlist Priority</h2>
+            </div>
+            <Link to="/watchlist" className="inline-flex items-center gap-1 text-xs font-medium text-[#FFB300] hover:text-[#FFA000] transition-colors">
+              Manage all ({watchlistItems.length}) <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {watchlistRows.length > 0 ? (
+              watchlistRows.map((item) => (
+                <div
+                  key={item.coinId}
+                  className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E]/60 px-3 py-2.5 transition-colors hover:bg-[#1E232E] hover:border-[#FFB300]/30"
+                >
+                  <Link to={`/asset/${item.coinId}`} className="flex items-center gap-2.5 min-w-0">
+                    <img src={item.image} alt="" className="h-6 w-6 rounded-full" />
+                    <div>
+                      <div className="font-semibold text-xs text-[#F0F4F8] truncate">{item.name}</div>
+                      <div className="text-[10px] uppercase font-mono text-[#94A3B8]">{item.symbol}</div>
                     </div>
-                    <div className="text-sm">
+                  </Link>
+
+                  <div className="hidden sm:block w-20 shrink-0">
+                    <Sparkline symbol={item.symbol} color={(item.change ?? 0) >= 0 ? '#00E676' : '#FF5252'} />
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="font-mono text-xs font-semibold text-[#F0F4F8] tabular-nums">
+                      {item.price !== null ? formatCurrency(item.price) : <span className="text-[#94A3B8]">—</span>}
+                    </div>
+                    <div className="text-[11px] font-mono tabular-nums">
                       {item.change !== null ? (
-                        <span className={item.change >= 0 ? 'text-emerald-600' : 'text-rose-500'}>
-                          {item.change >= 0 ? '+' : ''}{item.change.toFixed(1)}%
+                        <span className={item.change >= 0 ? 'text-[#00E676]' : 'text-[#FF5252]'}>
+                          {item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}%
                         </span>
                       ) : (
-                        <span className="text-slate-400 font-normal">—</span>
+                        <span className="text-[#94A3B8]">—</span>
                       )}
                     </div>
                   </div>
                 </div>
-              )) : (
-                <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center text-sm text-slate-500">
-                  Add assets from the markets page to build your watchlist.
-                </div>
-              )}
-            </div>
-          </GlassCard>
-        </SectionReveal>
-
-        <SectionReveal delay={0.21}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900">Top Movers</div>
-                <div className="text-sm text-slate-500">Momentum leaders and laggards</div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-[#262D38] bg-[#1E232E]/30 p-6 text-center text-xs text-[#94A3B8]">
+                <Star className="mx-auto h-6 w-6 text-[#94A3B8] mb-1.5" />
+                No priority watchlist assets configured. Star assets from Markets to track them here.
               </div>
-              <Link to="/markets" className="inline-flex items-center gap-1 text-sm font-medium text-violet-700">
-                Explore <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[20px] border border-emerald-100 bg-emerald-50/70 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
-                  <TrendingUp className="h-4 w-4" /> Top gainers
-                </div>
-                <div className="space-y-3">
-                  {topMovers.gainers.length ? topMovers.gainers.map((coin) => (
-                    <div key={coin.id} className="flex items-center justify-between rounded-[16px] bg-white/90 px-3 py-2">
-                      <div>
-                        <div className="font-medium text-slate-900">{coin.name}</div>
-                        <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{coin.symbol}</div>
-                      </div>
-                      <PriceChange value={coin.price_change_percentage_24h} />
-                    </div>
-                  )) : <Skeleton className="h-16 w-full" />}
-                </div>
-              </div>
-
-              <div className="rounded-[20px] border border-rose-100 bg-rose-50/70 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-rose-600">
-                  <TrendingDown className="h-4 w-4" /> Top losers
-                </div>
-                <div className="space-y-3">
-                  {topMovers.losers.length ? topMovers.losers.map((coin) => (
-                    <div key={coin.id} className="flex items-center justify-between rounded-[16px] bg-white/90 px-3 py-2">
-                      <div>
-                        <div className="font-medium text-slate-900">{coin.name}</div>
-                        <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{coin.symbol}</div>
-                      </div>
-                      <PriceChange value={coin.price_change_percentage_24h} />
-                    </div>
-                  )) : <Skeleton className="h-16 w-full" />}
-                </div>
-              </div>
-            </div>
-          </GlassCard>
-        </SectionReveal>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <SectionReveal delay={0.24}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900">Trending Coins</div>
-                <div className="text-sm text-slate-500">What people are watching right now</div>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
-                CoinGecko
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {trendingData?.coins?.slice(0, 4).map((coin) => (
-                <div key={coin.item.id} className="flex items-center justify-between rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                  <div className="flex items-center gap-3">
-                    <img src={coin.item.small} alt={coin.item.name} className="h-9 w-9 rounded-full" />
-                    <div>
-                      <div className="font-medium text-slate-900">{coin.item.name}</div>
-                      <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{coin.item.symbol}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-mono text-sm font-medium text-slate-900">{formatCurrency(coin.item.data.price)}</div>
-                    <div className={`text-sm ${coin.item.data.price_change_percentage_24h.usd >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {coin.item.data.price_change_percentage_24h.usd >= 0 ? '+' : ''}{coin.item.data.price_change_percentage_24h.usd.toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        </SectionReveal>
-
-        <SectionReveal delay={0.27}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900">Fear & Greed</div>
-                <div className="text-sm text-slate-500">Current sentiment in the market</div>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
-                Alternative.me
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col items-center justify-center rounded-[24px] border border-slate-200 bg-slate-50/80 p-6 text-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border border-violet-200 bg-white text-4xl font-semibold text-slate-900">
-                {fearGreedData?.value != null ? fearGreedData.value : <span className="text-2xl text-slate-400 font-normal">—</span>}
-              </div>
-              <div className="mt-4 text-xl font-semibold text-slate-900">
-                {fearGreedData?.value_classification ?? 'Unavailable'}
-              </div>
-              <div className="mt-2 text-sm text-slate-500">
-                {fearGreedData ? 'Sentiment measured from the latest live Alternative.me index.' : 'Live sentiment index feed is currently unavailable.'}
-              </div>
-            </div>
-          </GlassCard>
-        </SectionReveal>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionReveal delay={0.3}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900">Crypto News</div>
-                <div className="text-sm text-slate-500">Fresh stories from the market</div>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
-                RSS
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {news.length ? news.map((item) => (
-                <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="flex items-start justify-between gap-3 rounded-[18px] border border-slate-200 bg-slate-50/80 p-3 transition-all hover:border-violet-200 hover:bg-white">
-                  <div>
-                    <div className="font-medium text-slate-900">{item.title}</div>
-                    <div className="mt-1 text-sm text-slate-500">{item.source}</div>
-                  </div>
-                  <div className="rounded-2xl bg-white p-2 text-slate-500">
-                    <Newspaper className="h-4 w-4" />
-                  </div>
-                </a>
-              )) : <Skeleton className="h-24 w-full" />}
-            </div>
-          </GlassCard>
-        </SectionReveal>
-
-        <SectionReveal delay={0.33}>
-          <GlassCard className="card-sheen">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900">Recently Viewed Assets</div>
-                <div className="text-sm text-slate-500">A quick return path to your last looks</div>
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-slate-500">
-                History
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {recentAssets.length ? recentAssets.map((coin) => (
-                <Link key={coin.id} to={`/asset/${coin.id}`} className="flex items-center justify-between rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3 transition-all hover:border-violet-200 hover:bg-white">
-                  <div className="flex items-center gap-3">
-                    <img src={coin.image} alt={coin.name} className="h-9 w-9 rounded-full" />
-                    <div>
-                      <div className="font-medium text-slate-900">{coin.name}</div>
-                      <div className="text-xs uppercase tracking-[0.24em] text-slate-500">{coin.symbol}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Eye className="h-4 w-4" />
-                    Open
-                  </div>
-                </Link>
-              )) : <Skeleton className="h-24 w-full" />}
-            </div>
-          </GlassCard>
-        </SectionReveal>
-      </div>
-
-      <SectionReveal delay={0.36}>
-        <GlassCard className="card-sheen">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-lg font-semibold tracking-tight text-slate-900">Quick Actions</div>
-              <div className="text-sm text-slate-500">Jump to the actions that matter most</div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/markets" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:border-violet-200 hover:text-violet-700">
-                <Compass className="h-4 w-4" /> Explore Markets
-              </Link>
-              <Link to="/portfolio" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:border-violet-200 hover:text-violet-700">
-                <BriefcaseBusiness className="h-4 w-4" /> Manage Portfolio
-              </Link>
-              <Link to="/alerts" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:border-violet-200 hover:text-violet-700">
-                <BellRing className="h-4 w-4" /> Create Alert
-              </Link>
-              <Link to="/watchlist" className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-slate-800">
-                <Plus className="h-4 w-4" /> Add Watchlist
-              </Link>
-            </div>
+            )}
           </div>
-        </GlassCard>
-      </SectionReveal>
+        </div>
+
+        {/* Relevant News */}
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3 border-b border-[#262D38] pb-2.5">
+            <div className="flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-[#FFB300]" />
+              <h2 className="text-sm font-bold text-[#F0F4F8]">Market Intelligence News</h2>
+            </div>
+            <Link to="/news" className="text-xs font-medium text-[#FFB300] hover:text-[#FFA000] transition-colors">
+              Full feed →
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {newsLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-[#262D38] bg-[#1E232E]/60 p-2.5">
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ))
+            ) : news.length ? (
+              news.slice(0, 4).map((item) => (
+                <a
+                  key={item.id}
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex items-start justify-between gap-2.5 rounded-lg border border-[#262D38] bg-[#1E232E]/60 p-2.5 transition-colors hover:bg-[#1E232E] hover:border-[#FFB300]/30 group"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-[#F0F4F8] group-hover:text-[#FFB300] transition-colors line-clamp-1">
+                      {item.title}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-[10px] text-[#94A3B8] font-mono">
+                      <span>{item.source}</span>
+                      <span>•</span>
+                      <span>{item.published_at ? new Date(item.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent'}</span>
+                    </div>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-[#94A3B8] shrink-0 mt-0.5 group-hover:text-[#F0F4F8]" />
+                </a>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-[#262D38] bg-[#1E232E]/30 p-6 text-center text-xs text-[#94A3B8]">
+                News updates currently synchronizing.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* RECENTLY VIEWED ASSETS BAR */}
+      {recentAssets.length > 0 && (
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] px-4 py-2.5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-[#94A3B8] font-mono text-[11px] uppercase tracking-wider shrink-0">
+            <span>Recent Looks:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {recentAssets.map((coin) => (
+              <Link
+                key={coin.id}
+                to={`/asset/${coin.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-2.5 py-1 text-[#F0F4F8] hover:bg-[#262D38] transition-colors"
+              >
+                <img src={coin.image} alt="" className="h-4 w-4 rounded-full" />
+                <span className="font-semibold text-xs text-[#F0F4F8]">{coin.symbol.toUpperCase()}</span>
+                <span className="font-mono text-[11px] text-[#94A3B8]">
+                  ${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 8. QUICK ACTIONS STRIP */}
+      <div className="rounded-xl border border-[#262D38] bg-[#151921] px-4 py-3 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <Activity className="h-3.5 w-3.5 text-[#94A3B8]" />
+          <span className="text-[#F0F4F8] font-medium">Quick Desk Shortcuts:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/markets"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-[#F0F4F8] hover:bg-[#262D38] transition-colors"
+          >
+            <Compass className="h-3.5 w-3.5 text-[#FFB300]" /> Explore Markets
+          </Link>
+          <Link
+            to="/portfolio"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-[#F0F4F8] hover:bg-[#262D38] transition-colors"
+          >
+            <BriefcaseBusiness className="h-3.5 w-3.5 text-[#FFB300]" /> Portfolio
+          </Link>
+          <Link
+            to="/alerts"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-[#F0F4F8] hover:bg-[#262D38] transition-colors"
+          >
+            <BellRing className="h-3.5 w-3.5 text-[#FFB300]" /> Create Price Alert
+          </Link>
+          <button
+            onClick={() => setIsAddAssetOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-slate-950 font-semibold shadow-sm transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Holding
+          </button>
+        </div>
+      </div>
+
+      <AddAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} />
     </div>
   )
 }

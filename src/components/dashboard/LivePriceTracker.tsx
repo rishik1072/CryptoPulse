@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Wifi, WifiOff, Clock } from 'lucide-react'
@@ -21,88 +20,98 @@ export function LivePriceTracker() {
   }
 
   return (
-    <GlassCard className="col-span-full card-sheen">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <GlassCard className="col-span-full">
+      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="text-lg font-semibold tracking-tight">Live Market</div>
-          <div className="text-sm text-slate-400">Binance WebSocket • Real-time</div>
+          <div className="text-base font-semibold tracking-tight text-slate-100">Live Market Feed</div>
+          <div className="text-xs text-slate-400">Binance WebSocket • Real-time stream</div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2.5 text-xs">
           {connectionStatus === 'connected' && (
-            <div className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-emerald-300">
-              <Wifi className="h-3.5 w-3.5" /> Live
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#00E676]/30 bg-[#00E676]/10 px-2.5 py-1 text-[#00E676] font-semibold">
+              <Wifi className="h-3 w-3" /> Live
             </div>
           )}
           {connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? (
-            <div className="flex items-center gap-1.5 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1.5 text-amber-300 animate-pulse">
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#FFB300]/30 bg-[#FFB300]/10 px-2.5 py-1 text-[#FFB300] animate-pulse font-medium">
               Reconnecting...
             </div>
           ) : null}
           {connectionStatus === 'offline' && (
-            <div className="flex items-center gap-1.5 rounded-full border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 text-rose-300">
-              <WifiOff className="h-3.5 w-3.5" /> Offline
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#FF5252]/30 bg-[#FF5252]/10 px-2.5 py-1 text-[#FF5252] font-medium">
+              <WifiOff className="h-3 w-3" /> Offline
             </div>
           )}
 
           {connectionStatus === 'connected' && (
-            <div className="flex flex-wrap items-center gap-3 text-slate-400">
-              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+            <div className="flex flex-wrap items-center gap-2 text-[#94A3B8] text-xs">
+              <div className="flex items-center gap-1 rounded-lg border border-[#262D38] bg-[#1E232E] px-2.5 py-1 font-mono tabular-nums">
                 <Clock className="h-3 w-3" /> {latency}ms
               </div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Last update: {formatTime(lastUpdate)}</div>
+              <div className="rounded-lg border border-[#262D38] bg-[#1E232E] px-2.5 py-1 font-mono tabular-nums text-[#F0F4F8]">
+                Update: {formatTime(lastUpdate)}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         {TRACKED.map((symbol) => {
           const priceData = prices[symbol]
           const isUp = (priceData?.change || 0) >= 0
+          const status = useLivePriceStore.getState().getPriceStatus(symbol)
 
           return (
-            <motion.div
+            <div
               key={symbol}
-              whileHover={{ y: -2, scale: 1.01 }}
-              className="rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07]"
+              className="rounded-lg border border-[#262D38] bg-[#1E232E]/70 p-3 transition-colors hover:bg-[#1E232E]"
             >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-semibold text-lg tracking-tighter">{symbol}</div>
-                  <div className="text-[10px] text-muted">USDT</div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-xs tracking-tight text-[#F0F4F8]">{symbol}</span>
+                  <span className="text-[10px] font-mono text-[#94A3B8] uppercase">USDT</span>
                 </div>
-                
-                <AnimatePresence mode="wait">
-                  {priceData ? (
-                    <div className="flex flex-col items-end">
-                      <motion.div
-                        key={priceData.timestamp}
-                        initial={{ opacity: 0.4, y: -3 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className={`font-mono tabular-nums text-xl tracking-[-1px] transition-colors duration-300 ${
-                          isUp ? 'text-success' : 'text-danger'
-                        }`}
-                      >
-                        ${priceData.price.toLocaleString(undefined, { 
-                          minimumFractionDigits: symbol === 'DOGE' ? 4 : 2 
-                        })}
-                      </motion.div>
-                      <Sparkline symbol={symbol} color={isUp ? '#22c55e' : '#ef4444'} />
-                    </div>
-                  ) : (
-                    <div className="h-7 w-24 animate-pulse bg-white/10 rounded" />
-                  )}
-                </AnimatePresence>
+                {status === 'live' && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#00E676] animate-pulse" title="Live WebSocket tick" />
+                )}
+                {status === 'stale' && (
+                  <span className="rounded bg-[#FFB300]/10 px-1 py-0.2 text-[9px] font-mono text-[#FFB300]">stale</span>
+                )}
+                {status === 'unavailable' && (
+                  <span className="rounded bg-[#262D38] px-1 py-0.2 text-[9px] font-mono text-[#94A3B8]">—</span>
+                )}
               </div>
 
-              {priceData && (
-                <div className={`mt-3 text-sm font-medium tabular-nums flex items-center gap-1 ${isUp ? 'text-success' : 'text-danger'}`}>
-                  {isUp ? '+' : ''}{priceData.change.toFixed(2)}%
+              <div className="mt-2 flex items-baseline justify-between gap-1">
+                {priceData ? (
+                  <div className="font-mono tabular-nums text-sm sm:text-base font-bold text-[#F0F4F8] tracking-tight transition-colors duration-300">
+                    ${priceData.price.toLocaleString(undefined, {
+                      minimumFractionDigits: symbol === 'DOGE' ? 4 : 2,
+                      maximumFractionDigits: symbol === 'DOGE' ? 4 : 2,
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-5 w-20 animate-pulse bg-[#262D38] rounded" />
+                )}
+
+                <div className="shrink-0">
+                  <Sparkline symbol={symbol} color={isUp ? '#00E676' : '#FF5252'} />
                 </div>
-              )}
-            </motion.div>
+              </div>
+
+              <div className="mt-1 flex items-center justify-between text-[11px] font-mono tabular-nums">
+                {priceData ? (
+                  <span className={`inline-flex items-center font-medium ${isUp ? 'text-[#00E676]' : 'text-[#FF5252]'}`}>
+                    {isUp ? '+' : ''}{priceData.change.toFixed(2)}%
+                  </span>
+                ) : (
+                  <span className="text-[#94A3B8]">—</span>
+                )}
+                <span className="text-[10px] text-[#94A3B8]">24h</span>
+              </div>
+            </div>
           )
         })}
       </div>

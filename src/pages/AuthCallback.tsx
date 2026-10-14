@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, formatAuthError } from '@/lib/supabase'
 import { useAuthStore } from '@/store/useAuthStore'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -71,29 +70,27 @@ export default function AuthCallback() {
   }, [searchParams, navigate, setLoading, clearMessages])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#050816] p-6 text-slate-100 font-sans">
-      <div className="w-full max-w-[420px] space-y-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#0B0E14] p-4 text-[#F0F4F8] font-sans">
+      <div className="w-full max-w-[400px] space-y-4">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-violet-600 to-sky-500 shadow-lg shadow-violet-500/20">
-            <Sparkles className="h-6 w-6 text-white" />
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFB300] text-slate-950 font-bold shadow-md shadow-[#FFB300]/20">
+            <Sparkles className="h-5 w-5 text-slate-950" />
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.03em] bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold tracking-tight text-[#F0F4F8] font-heading">
             CryptoPulse
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Completing authentication...
+          <p className="mt-1 text-xs text-[#94A3B8]">
+            Completing authentication…
           </p>
         </div>
 
-        <GlassCard className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-6 shadow-premium backdrop-blur-xl sm:p-8">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(109,40,217,0.1),_transparent_60%)]" />
-          
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="h-12 w-12 animate-spin rounded-full border-3 border-violet-500 border-t-transparent" />
-            <p className="mt-4 text-sm text-slate-400">Please wait while we complete your sign in...</p>
+        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-8 text-center shadow-xl">
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#FFB300] border-t-transparent" />
+            <p className="mt-4 text-xs text-[#94A3B8] font-medium">Please wait while we secure your connection…</p>
           </div>
-        </GlassCard>
+        </div>
       </div>
     </div>
   )
-}
+}

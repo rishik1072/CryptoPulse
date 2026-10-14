@@ -183,6 +183,11 @@ CREATE POLICY "Users can view own holdings" ON holdings
 CREATE POLICY "Users can manage own holdings" ON holdings
     FOR ALL USING (auth.uid() = user_id);
 
+-- Indexes for performance and RLS filtering
+CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);
+CREATE INDEX IF NOT EXISTS idx_holdings_user_id ON holdings(user_id);
+CREATE INDEX IF NOT EXISTS idx_holdings_portfolio_id ON holdings(portfolio_id);
+
 -- ============================================
 -- TRANSACTIONS TABLE
 -- ============================================
@@ -627,8 +632,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION trigger_update_portfolio_totals()
 RETURNS TRIGGER AS $$
 BEGIN
-    PERFORM update_portfolio_totals(NEW.portfolio_id);
-    RETURN NEW;
+    IF (TG_OP = 'DELETE') THEN
+        PERFORM update_portfolio_totals(OLD.portfolio_id);
+        RETURN OLD;
+    ELSE
+        PERFORM update_portfolio_totals(NEW.portfolio_id);
+        RETURN NEW;
+    END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

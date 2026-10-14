@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useGlobalData, useTrendingCoins } from '@/services/coingecko'
 import { useCryptoNewsFeed, type CryptoNews } from '@/services/news'
 import { FearGreedWidget } from '@/components/dashboard/FearGreedWidget'
-import { Search, Bookmark, Share2, ExternalLink, KeyRound, RefreshCw, AlertCircle } from 'lucide-react'
+import { Search, Bookmark, Share2, ExternalLink, KeyRound, RefreshCw, AlertCircle, X, Newspaper } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { toast } from 'sonner'
 
 function formatTimeAgo(isoString: string): string {
@@ -105,75 +105,108 @@ export default function News() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="mx-auto max-w-[1720px] space-y-4">
+      {/* 1. Page Header with aligned search */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>
-          <h1 className="text-4xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-5xl dark:text-white">News Center</h1>
-          <p className="text-slate-500 mt-1 text-sm sm:text-base">Verified, real-time cryptocurrency news and publisher intelligence</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F0F4F8]">
+              News Center
+            </h1>
+            <span className="text-[11px] font-medium font-mono text-[#94A3B8] bg-[#151921] border border-[#262D38] px-2 py-0.5 rounded-full">
+              {articles.length} Stories
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-[#94A3B8]">
+            Verified cryptocurrency headlines, macro policy updates, and publisher intelligence.
+          </p>
         </div>
 
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+        {/* Search input aligned with header */}
+        <div className="relative w-full sm:w-72 md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8] pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search verified stories..."
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-violet-300 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+            aria-label="Search stories"
+            className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#151921] border border-[#262D38] rounded-lg text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F0F4F8] p-0.5 cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Category Filters */}
+      {/* 2. Category Toolbar */}
       {availableCategories.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {availableCategories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-2xl text-xs sm:text-sm font-medium transition-all ${
-                activeCategory === cat
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-2.5 rounded-xl border border-[#262D38] bg-[#151921] p-2">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+            {availableCategories.map((cat) => {
+              const isActive = activeCategory === cat
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#1E232E] text-[#FFB300] font-semibold border border-[#FFB300]/40 shadow-sm'
+                      : 'text-[#94A3B8] hover:text-[#F0F4F8] hover:bg-[#1E232E] border border-transparent'
+                  }`}
+                >
+                  {isActive && <span className="h-1.5 w-1.5 rounded-full bg-[#FFB300] shrink-0" />}
+                  <span>{cat}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="text-[11px] font-mono text-[#94A3B8] px-1 hidden sm:block">
+            Showing <span className="text-[#F0F4F8] font-semibold">{filteredNews.length}</span> articles
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      {/* 3. Main Grid: Feed + Market Widgets */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
         {/* Main News Feed */}
-        <div className="xl:col-span-8 space-y-4">
+        <div className="xl:col-span-8 space-y-3">
           {/* Configuration Required Banner if no key and feed unreachable */}
           {newsFeed?.requiresApiKey && (
-            <GlassCard className="border-amber-500/20 bg-amber-500/5 p-6 text-slate-800 dark:text-slate-200">
-              <div className="flex items-start gap-4">
-                <div className="rounded-2xl bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400 flex-shrink-0">
-                  <KeyRound className="h-6 w-6" />
+            <div className="rounded-xl border border-[#FFB300]/30 bg-[#FFB300]/10 p-4 text-xs text-[#FFB300]">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-[#FFB300]/15 p-2 text-[#FFB300] shrink-0">
+                  <KeyRound className="h-5 w-5" />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">API Configuration Notice</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <h3 className="text-sm font-semibold text-[#FFB300]">API Configuration Notice</h3>
+                  <p className="text-xs text-[#F0F4F8] leading-relaxed">
                     Live crypto news integration requires an authentic provider key. CryptoPulse never fabricates headlines or simulates articles when external endpoints are unconfigured or rate-limited.
                   </p>
-                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs font-mono text-amber-800 dark:text-amber-300">
+                  <div className="rounded-md border border-[#FFB300]/30 bg-[#FFB300]/10 p-2 text-[11px] font-mono text-[#FFB300]">
                     Set VITE_CRYPTOCOMPARE_API_KEY=your_key in .env.local
                   </div>
-                  <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <div className="pt-1 flex flex-wrap items-center gap-2">
                     <a
                       href="https://min-api.cryptocompare.com/"
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3 py-1.5 text-xs font-semibold text-slate-950 transition-colors shadow-sm"
                     >
-                      <span>Get Free CryptoCompare Key</span>
+                      <span>Get Free API Key</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
                     <button
                       onClick={() => refetch()}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] hover:bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition-colors cursor-pointer"
                     >
                       <RefreshCw className="h-3 w-3" />
                       <span>Check Connection</span>
@@ -181,185 +214,224 @@ export default function News() {
                   </div>
                 </div>
               </div>
-            </GlassCard>
+            </div>
           )}
 
           {/* Rate limited notice */}
           {newsFeed?.isRateLimited && (
-            <GlassCard className="border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <div>News service rate limit reached. Cached articles remain visible. Please retry shortly.</div>
-            </GlassCard>
+            <div className="rounded-xl border border-[#FFB300]/30 bg-[#FFB300]/10 p-3.5 text-xs text-[#FFB300] flex items-center gap-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0 text-[#FFB300]" />
+              <div className="text-[#F0F4F8]">News service rate limit reached. Cached articles remain visible. Please retry shortly.</div>
+            </div>
           )}
 
           {/* Loading Skeletons */}
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, index) => (
-                <GlassCard key={index} className="p-5">
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      <Skeleton className="h-4 w-24 rounded" />
-                      <Skeleton className="h-4 w-16 rounded" />
-                    </div>
-                    <Skeleton className="h-6 w-4/5 rounded" />
-                    <Skeleton className="h-4 w-2/3 rounded" />
+                <div key={index} className="rounded-xl border border-[#262D38] bg-[#151921] p-4.5 space-y-2.5">
+                  <div className="flex gap-2">
+                    <Skeleton className="h-3.5 w-20 rounded" />
+                    <Skeleton className="h-3.5 w-14 rounded" />
                   </div>
-                </GlassCard>
+                  <Skeleton className="h-5 w-4/5 rounded" />
+                  <Skeleton className="h-3.5 w-2/3 rounded" />
+                </div>
               ))}
             </div>
           ) : isError && articles.length === 0 ? (
-            <GlassCard>
-              <div className="py-12 text-center space-y-3">
-                <AlertCircle className="mx-auto h-8 w-8 text-rose-500" />
-                <div className="text-base font-semibold text-slate-900 dark:text-white">Unable to Load News Feed</div>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  {error instanceof Error ? error.message : 'An error occurred while contacting the news service.'}
-                </p>
+            <EmptyState
+              boxed
+              icon={<AlertCircle className="h-8 w-8 text-[#FF5252]" />}
+              title="Unable to Load News Feed"
+              description={error instanceof Error ? error.message : 'An error occurred while contacting the news service.'}
+              action={
                 <button
                   onClick={() => refetch()}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white dark:bg-white dark:text-slate-900"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer"
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Retry
                 </button>
-              </div>
-            </GlassCard>
+              }
+            />
           ) : filteredNews.length === 0 ? (
-            <GlassCard>
-              <div className="py-12 text-center text-slate-500 text-sm">
-                {search ? 'No verified stories found matching your search.' : 'No stories available in this category.'}
-              </div>
-            </GlassCard>
+            <EmptyState
+              boxed
+              icon={<Newspaper className="h-8 w-8 text-[#94A3B8]" />}
+              title="No stories found"
+              description={search ? `No stories matching "${search}".` : 'No stories currently available in this category.'}
+              action={
+                search ? (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="text-xs text-[#FFB300] hover:text-[#FFA000] font-medium underline cursor-pointer"
+                  >
+                    Clear search
+                  </button>
+                ) : undefined
+              }
+            />
           ) : (
-            filteredNews.map((news) => (
-              <GlassCard key={news.id} className="group transition-all hover:border-slate-300 dark:hover:border-slate-700 p-5">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-500">
-                    <span className="font-semibold text-violet-600 dark:text-violet-400">{news.source}</span>
+            filteredNews.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-[#262D38] bg-[#151921] p-4.5 hover:border-[#FFB300]/40 transition-all shadow-sm group"
+              >
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
+                    <span className="font-semibold text-[#FFB300]">{item.source}</span>
                     <span>&bull;</span>
-                    <span>{formatTimeAgo(news.published_at)}</span>
-                    {news.category && (
+                    <span className="text-[#94A3B8]">{formatTimeAgo(item.published_at)}</span>
+                    {item.category && (
                       <>
                         <span>&bull;</span>
-                        <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-400">
-                          {news.category}
+                        <span className="rounded bg-[#1E232E] border border-[#262D38] px-2 py-0.2 text-[10px] font-medium text-[#F0F4F8]">
+                          {item.category}
                         </span>
                       </>
                     )}
                   </div>
 
                   <a
-                    href={news.url}
+                    href={item.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="block group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors"
+                    className="block group-hover:text-[#FFB300] transition-colors"
                   >
-                    <h3 className="font-semibold text-lg sm:text-xl tracking-tight leading-snug text-slate-900 dark:text-white">
-                      {news.title}
+                    <h3 className="font-semibold text-base sm:text-lg tracking-tight leading-snug text-[#F0F4F8] group-hover:text-[#FFB300] transition-colors">
+                      {item.title}
                     </h3>
                   </a>
 
-                  {news.body && (
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                      {news.body}
+                  {item.body && (
+                    <p className="text-xs text-[#94A3B8] line-clamp-2 leading-relaxed">
+                      {item.body}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-500">
+                  <div className="flex items-center justify-between pt-2.5 border-t border-[#262D38]/50 text-xs text-[#94A3B8]">
                     <a
-                      href={news.url}
+                      href={item.url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-500 dark:text-violet-400 font-medium"
+                      className="inline-flex items-center gap-1 text-[#FFB300] hover:text-[#FFA000] font-medium"
                     >
-                      <span>Read original article</span>
+                      <span>Read original story</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
 
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => toggleBookmark(news.id)}
-                        className="flex items-center gap-1 hover:text-slate-900 dark:hover:text-white transition-colors"
-                        aria-label={bookmarked.includes(news.id) ? 'Remove bookmark' : 'Bookmark article'}
+                        onClick={() => toggleBookmark(item.id)}
+                        className="flex items-center gap-1 hover:text-[#F0F4F8] transition-colors cursor-pointer"
+                        aria-label={bookmarked.includes(item.id) ? 'Remove bookmark' : 'Bookmark article'}
                       >
-                        <Bookmark className={`h-3.5 w-3.5 ${bookmarked.includes(news.id) ? 'fill-amber-500 text-amber-500' : ''}`} />
-                        <span>{bookmarked.includes(news.id) ? 'Saved' : 'Save'}</span>
+                        <Bookmark
+                          className={`h-3.5 w-3.5 ${
+                            bookmarked.includes(item.id) ? 'fill-[#FFB300] text-[#FFB300]' : 'text-[#94A3B8]'
+                          }`}
+                        />
+                        <span className="text-xs">{bookmarked.includes(item.id) ? 'Saved' : 'Save'}</span>
                       </button>
                       <button
-                        onClick={() => handleShare(news)}
-                        className="flex items-center gap-1 hover:text-slate-900 dark:hover:text-white transition-colors"
+                        onClick={() => handleShare(item)}
+                        className="flex items-center gap-1 hover:text-[#F0F4F8] transition-colors cursor-pointer"
                         aria-label="Share article"
                       >
-                        <Share2 className="h-3.5 w-3.5" />
-                        <span>Share</span>
+                        <Share2 className="h-3.5 w-3.5 text-[#94A3B8]" />
+                        <span className="text-xs">Share</span>
                       </button>
                     </div>
                   </div>
                 </div>
-              </GlassCard>
+              </div>
             ))
           )}
         </div>
 
-        {/* Sidebar Widgets */}
-        <div className="xl:col-span-4 space-y-6">
+        {/* Sidebar Market Widgets */}
+        <div className="xl:col-span-4 space-y-4">
           {/* Authentic Fear & Greed widget */}
           <FearGreedWidget />
 
           {/* Market Snapshot */}
-          <GlassCard>
-            <div className="text-xs text-muted mb-4 tracking-[1.5px] font-semibold">MARKET SNAPSHOT</div>
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600 dark:text-slate-400">BTC Dominance</span>
-                <span className="font-mono font-medium text-slate-900 dark:text-white">
-                  {global?.market_cap_percentage?.btc != null ? `${global.market_cap_percentage.btc.toFixed(1)}%` : '—'}
+          <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+            <div className="text-xs uppercase tracking-wider font-semibold text-[#94A3B8] mb-3">
+              Market Snapshot
+            </div>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-[#262D38]/50">
+                <span className="text-[#94A3B8]">BTC Dominance</span>
+                <span className="font-mono font-semibold text-[#F0F4F8] tabular-nums">
+                  {global?.market_cap_percentage?.btc != null
+                    ? `${global.market_cap_percentage.btc.toFixed(1)}%`
+                    : '—'}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600 dark:text-slate-400">ETH Dominance</span>
-                <span className="font-mono font-medium text-slate-900 dark:text-white">
-                  {global?.market_cap_percentage?.eth != null ? `${global.market_cap_percentage.eth.toFixed(1)}%` : '—'}
+              <div className="flex justify-between items-center py-1 border-b border-[#262D38]/50">
+                <span className="text-[#94A3B8]">ETH Dominance</span>
+                <span className="font-mono font-semibold text-[#F0F4F8] tabular-nums">
+                  {global?.market_cap_percentage?.eth != null
+                    ? `${global.market_cap_percentage.eth.toFixed(1)}%`
+                    : '—'}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600 dark:text-slate-400">Global 24h Volume</span>
-                <span className="font-mono font-medium text-slate-900 dark:text-white">
-                  {global?.total_volume?.usd != null ? `$${(global.total_volume.usd / 1e9).toFixed(1)}B` : '—'}
+              <div className="flex justify-between items-center py-1">
+                <span className="text-[#94A3B8]">Global 24h Volume</span>
+                <span className="font-mono font-semibold text-[#F0F4F8] tabular-nums">
+                  {global?.total_volume?.usd != null
+                    ? `$${(global.total_volume.usd / 1e9).toFixed(1)}B`
+                    : '—'}
                 </span>
               </div>
             </div>
-          </GlassCard>
+          </div>
 
           {/* Trending Coins */}
-          <GlassCard>
-            <div className="text-xs text-muted mb-4 tracking-[1.5px] font-semibold">TRENDING COINS</div>
-            <div className="space-y-3 text-sm">
+          <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm">
+            <div className="text-xs uppercase tracking-wider font-semibold text-[#94A3B8] mb-3">
+              Trending Coins
+            </div>
+            <div className="space-y-2 text-xs">
               {trending?.coins && trending.coins.length > 0 ? (
                 trending.coins.slice(0, 5).map((coin, i: number) => {
                   const change = coin.item.data?.price_change_percentage_24h?.usd
                   const isPositive = (change ?? 0) >= 0
                   return (
-                    <div key={i} className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <img src={coin.item.small} className="h-5 w-5 rounded-full" alt={coin.item.name} />
-                        <span className="font-medium text-slate-900 dark:text-white">{coin.item.name}</span>
+                    <div
+                      key={i}
+                      className="flex justify-between items-center py-1 hover:bg-[#1E232E] px-2 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={coin.item.small}
+                          className="h-4.5 w-4.5 rounded-full object-cover shrink-0"
+                          alt={coin.item.name}
+                        />
+                        <span className="font-medium text-[#F0F4F8]">{coin.item.name}</span>
+                        <span className="text-[10px] font-mono uppercase text-[#94A3B8]">
+                          {coin.item.symbol}
+                        </span>
                       </div>
                       {change != null ? (
-                        <span className={`text-xs font-mono font-medium ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        <span
+                          className={`font-mono tabular-nums font-semibold ${
+                            isPositive ? 'text-[#00E676]' : 'text-[#FF5252]'
+                          }`}
+                        >
                           {isPositive ? '+' : ''}{change.toFixed(1)}%
                         </span>
                       ) : (
-                        <span className="text-xs text-muted font-mono">—</span>
+                        <span className="text-[#94A3B8] font-mono">—</span>
                       )}
                     </div>
                   )
                 })
               ) : (
-                <div className="text-xs text-slate-400 py-2">No trending coins available</div>
+                <div className="text-xs text-[#94A3B8] py-1">No trending coins available</div>
               )}
             </div>
-          </GlassCard>
+          </div>
         </div>
       </div>
     </div>

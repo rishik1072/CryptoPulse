@@ -6,6 +6,23 @@
 -- 1. Holdings table updates: support notes and image metadata
 ALTER TABLE holdings ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE holdings ADD COLUMN IF NOT EXISTS image TEXT;
+CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);
+CREATE INDEX IF NOT EXISTS idx_holdings_user_id ON holdings(user_id);
+CREATE INDEX IF NOT EXISTS idx_holdings_portfolio_id ON holdings(portfolio_id);
+
+-- Ensure portfolio totals trigger safely handles DELETE operations
+CREATE OR REPLACE FUNCTION trigger_update_portfolio_totals()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        PERFORM update_portfolio_totals(OLD.portfolio_id);
+        RETURN OLD;
+    ELSE
+        PERFORM update_portfolio_totals(NEW.portfolio_id);
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. Watchlist items table updates: support image and pinned state
 ALTER TABLE watchlist_items ADD COLUMN IF NOT EXISTS image TEXT;

@@ -6,8 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 
 function LocalProfileMenu() {
   const [open, setOpen] = useState(false)
-  const { user, isAuthenticated, signOut, preferences } = useAuthStore()
-  const isDark = preferences.theme === 'dark'
+  const { user, isAuthenticated, signOut } = useAuthStore()
 
   const displayName = user?.name || 'Investor'
   const email = user?.email || 'Secure workspace'
@@ -15,13 +14,13 @@ function LocalProfileMenu() {
 
   if (!isAuthenticated) {
     return (
-      <Link to="/sign-in" className={`flex items-center gap-2.5 rounded-2xl px-2 py-1.5 transition-all ${isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-100'}`}>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-sky-500 text-white">
-          <User className="h-4 w-4" />
+      <Link to="/sign-in" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-[#1E232E]">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFB300] text-slate-950 font-bold shadow-sm">
+          <User className="h-4 w-4 text-slate-950" />
         </div>
         <div className="hidden text-left md:block">
-          <div className={`text-sm font-medium ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>Sign in</div>
-          <div className={`-mt-0.5 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Secure access</div>
+          <div className="text-xs font-semibold text-[#F0F4F8]">Sign in</div>
+          <div className="-mt-0.5 text-[10px] text-[#94A3B8]">Institutional desk</div>
         </div>
       </Link>
     )
@@ -33,7 +32,7 @@ function LocalProfileMenu() {
     <div className="relative">
       <button
         onClick={() => setOpen((value) => !value)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 font-bold text-sm text-white shadow-md shadow-violet-500/20 ring-2 ring-violet-500/30 hover:scale-105 transition-all"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFB300] font-semibold text-xs text-slate-950 border border-[#FFB300]/40 hover:ring-2 hover:ring-[#FFB300]/30 transition-colors cursor-pointer shadow-sm"
         aria-label="User account menu"
       >
         {avatarUrl ? (
@@ -49,34 +48,34 @@ function LocalProfileMenu() {
             initial={{ opacity: 0, y: 8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            className={`absolute right-0 top-[54px] z-50 w-60 rounded-3xl border py-1 shadow-xl backdrop-blur-xl ${isDark ? 'border-slate-800 bg-slate-950/95' : 'border-slate-200 bg-white/95'}`}
+            className="absolute right-0 top-[48px] z-50 w-56 rounded-xl border border-border bg-surface py-1 shadow-2xl text-foreground"
           >
-            <div className={`border-b px-4 py-3 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className={`font-medium ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{displayName}</div>
-              <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{email}</div>
+            <div className="border-b border-border px-3.5 py-2.5">
+              <div className="font-semibold text-xs text-foreground truncate">{displayName}</div>
+              <div className="text-[11px] text-muted truncate mt-0.5">{email}</div>
             </div>
 
             <div className="py-1">
-              <Link to="/profile" className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <User className={`h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> Profile
+              <Link to="/profile" className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-elevated hover:text-foreground">
+                <User className="h-3.5 w-3.5 text-muted" /> Profile
               </Link>
-              <Link to="/portfolio" className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <CreditCard className={`h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> Portfolio
+              <Link to="/portfolio" className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-elevated hover:text-foreground">
+                <CreditCard className="h-3.5 w-3.5 text-muted" /> Portfolio
               </Link>
-              <Link to="/settings" className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <SettingsIcon className={`h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> Settings
+              <Link to="/settings" className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-elevated hover:text-foreground">
+                <SettingsIcon className="h-3.5 w-3.5 text-muted" /> Settings
               </Link>
             </div>
 
-            <div className={`mt-1 border-t pt-1 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className="mt-1 border-t border-[#262D38] pt-1">
               <button
                 onClick={() => {
                   signOut()
                   window.location.assign('/sign-in')
                 }}
-                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm text-rose-500 transition-colors ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-[#FF5252] transition-colors hover:bg-[#FF5252]/10 cursor-pointer"
               >
-                <LogOut className="h-4 w-4" /> Sign out
+                <LogOut className="h-3.5 w-3.5 text-[#FF5252]" /> Sign out
               </button>
             </div>
           </motion.div>

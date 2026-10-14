@@ -26,7 +26,7 @@ export function MarketDominanceChart({ btc, eth }: MarketDominanceChartProps) {
             outerRadius={95}
             dataKey="value"
             strokeWidth={4}
-            stroke="#050816"
+            stroke="var(--surface, #151921)"
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
@@ -34,10 +34,11 @@ export function MarketDominanceChart({ btc, eth }: MarketDominanceChartProps) {
           </Pie>
           <Tooltip 
             contentStyle={{ 
-              backgroundColor: '#0f172a', 
-              border: '1px solid #334155', 
+              backgroundColor: 'var(--surface-elevated, #1B2230)', 
+              border: '1px solid var(--border, #262D38)', 
               borderRadius: '12px',
-              color: '#f8fafc' 
+              color: 'var(--foreground, #F0F4F8)',
+              fontSize: '12px',
             }} 
           />
         </PieChart>

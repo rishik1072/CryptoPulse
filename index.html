@@ -8,6 +8,34 @@
     <meta name="keywords" content="crypto, cryptocurrency, bitcoin, ethereum, dashboard, trading, portfolio" />
     <meta name="theme-color" content="#050816" />
     <title>CryptoPulse • Premium Crypto Dashboard</title>
+    <script>
+      (function() {
+        try {
+          var theme = 'dark';
+          var auth = localStorage.getItem('cryptopulse-auth-v4');
+          if (auth) {
+            var parsed = JSON.parse(auth);
+            if (parsed && parsed.state && parsed.state.preferences && (parsed.state.preferences.theme === 'light' || parsed.state.preferences.theme === 'dark')) {
+              theme = parsed.state.preferences.theme;
+            }
+          }
+          if (theme === 'dark') {
+            var ui = localStorage.getItem('cryptopulse-ui');
+            if (ui) {
+              var parsedUi = JSON.parse(ui);
+              if (parsedUi && parsedUi.state && (parsedUi.state.theme === 'light' || parsedUi.state.theme === 'dark')) {
+                theme = parsedUi.state.theme;
+              }
+            }
+          }
+          var root = document.documentElement;
+          root.classList.remove('light', 'dark');
+          root.classList.add(theme);
+          root.setAttribute('data-theme', theme);
+          root.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

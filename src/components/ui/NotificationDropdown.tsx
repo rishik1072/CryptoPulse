@@ -2,54 +2,43 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, BellRing, CheckCheck, Trash2, ArrowRight } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
 import { useAlertStore } from '@/store/useAlertStore'
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
-  const { preferences } = useAuthStore()
   const { alerts, clearTriggered } = useAlertStore()
-  const isDark = preferences.theme === 'dark'
 
   const triggeredAlerts = alerts.filter((a) => a.triggered)
   const hasUnread = triggeredAlerts.length > 0
 
   return (
     <div className="relative">
-      <motion.button
-        whileHover={{ scale: 1.04, y: -1 }}
-        whileTap={{ scale: 0.96 }}
+      <button
         onClick={() => setOpen((value) => !value)}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-2xl transition-all active:scale-[0.96] ${
-          isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-100'
-        }`}
+        className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[#262D38] bg-[#1E232E] text-[#94A3B8] hover:text-[#F0F4F8] hover:bg-[#262D38] transition-colors"
         aria-label="View notifications"
         aria-expanded={open}
       >
-        <Bell className={`h-4 w-4 ${isDark ? 'text-slate-200' : 'text-slate-600'}`} />
+        <Bell className="h-3.5 w-3.5" />
         {hasUnread && (
-          <div className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-violet-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+          <div className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#FFB300] ring-2 ring-[#151921] animate-pulse" />
         )}
-      </motion.button>
+      </button>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-            className={`absolute right-0 top-12 z-50 w-84 rounded-[24px] border p-1 shadow-2xl backdrop-blur-xl ${
-              isDark ? 'border-slate-800 bg-slate-950/95' : 'border-slate-200 bg-white/95'
-            }`}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-11 z-50 w-80 rounded-xl border border-border bg-surface shadow-2xl backdrop-blur-md overflow-hidden text-foreground"
           >
-            <div className={`flex items-center justify-between border-b px-4 py-3 text-sm font-semibold ${
-              isDark ? 'border-slate-800 text-slate-100' : 'border-slate-200 text-slate-900'
-            }`}>
+            <div className="flex items-center justify-between border-b border-border bg-surface-elevated px-3.5 py-2.5 text-xs font-semibold text-foreground">
               <div className="flex items-center gap-2">
                 <span>Notifications</span>
                 {hasUnread && (
-                  <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-mono font-medium text-violet-600 dark:text-violet-400">
+                  <span className="rounded-full bg-[#FFB300]/20 px-2 py-0.2 text-[10px] font-mono font-medium text-[#FFB300]">
                     {triggeredAlerts.length}
                   </span>
                 )}
@@ -57,7 +46,7 @@ export function NotificationDropdown() {
               {hasUnread && (
                 <button
                   onClick={() => clearTriggered()}
-                  className="flex items-center gap-1 text-[11px] font-normal text-slate-400 hover:text-rose-500 transition-colors"
+                  className="flex items-center gap-1 text-[11px] font-normal text-[#94A3B8] hover:text-[#FF5252] transition-colors cursor-pointer"
                   title="Clear all triggered notifications"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -66,15 +55,15 @@ export function NotificationDropdown() {
               )}
             </div>
 
-            <div className="max-h-80 overflow-y-auto py-1">
+            <div className="max-h-80 overflow-y-auto p-1.5 space-y-1">
               {triggeredAlerts.length === 0 ? (
                 <div className="py-8 px-4 text-center">
-                  <CheckCheck className={`mx-auto h-8 w-8 mb-2 ${isDark ? 'text-slate-700' : 'text-slate-300'}`} />
-                  <div className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>
+                  <CheckCheck className="mx-auto h-7 w-7 mb-2 text-[#94A3B8]/40" />
+                  <div className="text-xs font-medium text-[#94A3B8]">
                     All caught up
                   </div>
-                  <p className={`mt-1 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'} max-w-[200px] mx-auto`}>
-                    Active market price alerts will notify you here when triggered.
+                  <p className="mt-1 text-[11px] text-[#94A3B8]/70 max-w-[200px] mx-auto">
+                    Active price alerts will appear here when triggered.
                   </p>
                 </div>
               ) : (
@@ -82,22 +71,19 @@ export function NotificationDropdown() {
                   <motion.div
                     key={alert.id}
                     layout
-                    whileHover={{ x: 2, scale: 1.002 }}
-                    className={`flex items-start gap-3 rounded-2xl px-4 py-3 transition-colors ${
-                      isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-50'
-                    }`}
+                    className="flex items-start gap-2.5 rounded-lg p-2.5 hover:bg-[#1E232E] transition-colors"
                   >
-                    <div className="mt-0.5 rounded-xl bg-violet-100 dark:bg-violet-950/40 p-2 text-violet-700 dark:text-violet-300 flex-shrink-0">
-                      <BellRing className="h-4 w-4" />
+                    <div className="mt-0.5 rounded-md bg-[#FFB300]/15 p-1.5 text-[#FFB300] shrink-0 border border-[#FFB300]/30">
+                      <BellRing className="h-3.5 w-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                      <div className="text-xs font-semibold text-[#F0F4F8]">
                         {alert.symbol.toUpperCase()} Alert Triggered
                       </div>
-                      <div className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <div className="text-[11px] mt-0.5 text-[#94A3B8]">
                         Target of {alert.type.replace(/_/g, ' ')} (${alert.value.toLocaleString()}) met
                       </div>
-                      <div className={`text-[10px] mt-1 font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <div className="text-[10px] mt-1 font-mono text-[#94A3B8]/70">
                         {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
@@ -106,13 +92,11 @@ export function NotificationDropdown() {
               )}
             </div>
 
-            <div className={`border-t px-4 py-2.5 text-center text-xs ${
-              isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
-            }`}>
+            <div className="border-t border-[#262D38] bg-[#0B0E14] px-3.5 py-2 text-center text-xs">
               <Link
                 to="/alerts"
                 onClick={() => setOpen(false)}
-                className="inline-flex items-center gap-1 font-medium text-violet-600 dark:text-violet-400 hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#FFB300] hover:text-[#FFA000] transition-colors"
               >
                 <span>Manage all price alerts</span>
                 <ArrowRight className="h-3 w-3" />

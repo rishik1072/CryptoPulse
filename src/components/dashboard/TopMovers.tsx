@@ -19,32 +19,32 @@ export function TopMovers({ data, isLoading }: TopMoversProps) {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
-      <GlassCard className="card-sheen h-full">
-        <div className="mb-5 flex items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-          <div className="text-base font-semibold tracking-tight">Top Gainers</div>
+      <GlassCard className="h-full">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-[#00E676] animate-pulse" />
+          <div className="text-sm font-semibold tracking-tight text-[#F0F4F8] font-heading">Top Gainers</div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {isLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-16" />
+              <div key={i} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-2.5">
+                <Skeleton className="h-3.5 w-24 bg-[#262D38]" />
+                <Skeleton className="h-3.5 w-16 bg-[#262D38]" />
               </div>
             ))
           ) : (
             gainers.map((coin) => (
-              <div key={coin.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3 transition-colors hover:bg-white/10">
-                <div className="flex items-center gap-3">
-                  <img src={coin.image} className="h-7 w-7 rounded-full" alt="" />
+              <div key={coin.id} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-2.5 transition-colors hover:border-[#00E676]/30 hover:bg-[#1E232E]/80">
+                <div className="flex items-center gap-2.5">
+                  <img src={coin.image} className="h-6 w-6 rounded-md bg-[#0B0E14]" alt="" />
                   <div>
-                    <div className="font-medium text-white">{coin.name}</div>
-                    <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{coin.symbol}</div>
+                    <div className="font-medium text-xs text-[#F0F4F8]">{coin.name}</div>
+                    <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">{coin.symbol}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono text-sm text-white">${coin.current_price.toLocaleString()}</div>
+                  <div className="font-mono text-xs text-[#F0F4F8] tabular-nums">${coin.current_price.toLocaleString()}</div>
                   <PriceChange value={coin.price_change_percentage_24h} />
                 </div>
               </div>
@@ -53,32 +53,32 @@ export function TopMovers({ data, isLoading }: TopMoversProps) {
         </div>
       </GlassCard>
 
-      <GlassCard className="card-sheen h-full">
-        <div className="mb-5 flex items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-          <div className="text-base font-semibold tracking-tight">Top Losers</div>
+      <GlassCard className="h-full">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-[#FF5252]" />
+          <div className="text-sm font-semibold tracking-tight text-[#F0F4F8] font-heading">Top Losers</div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {isLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-16" />
+              <div key={i} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-2.5">
+                <Skeleton className="h-3.5 w-24 bg-[#262D38]" />
+                <Skeleton className="h-3.5 w-16 bg-[#262D38]" />
               </div>
             ))
           ) : (
             losers.map((coin) => (
-              <div key={coin.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-3 transition-colors hover:bg-white/10">
-                <div className="flex items-center gap-3">
-                  <img src={coin.image} className="h-7 w-7 rounded-full" alt="" />
+              <div key={coin.id} className="flex items-center justify-between rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-2.5 transition-colors hover:border-[#FF5252]/30 hover:bg-[#1E232E]/80">
+                <div className="flex items-center gap-2.5">
+                  <img src={coin.image} className="h-6 w-6 rounded-md bg-[#0B0E14]" alt="" />
                   <div>
-                    <div className="font-medium text-white">{coin.name}</div>
-                    <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{coin.symbol}</div>
+                    <div className="font-medium text-xs text-[#F0F4F8]">{coin.name}</div>
+                    <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">{coin.symbol}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono text-sm text-white">${coin.current_price.toLocaleString()}</div>
+                  <div className="font-mono text-xs text-[#F0F4F8] tabular-nums">${coin.current_price.toLocaleString()}</div>
                   <PriceChange value={coin.price_change_percentage_24h} />
                 </div>
               </div>

@@ -121,7 +121,7 @@ export const RealTimePriceChart = memo(({
   return (
     <div 
       ref={chartRef} 
-      className="w-full rounded-2xl overflow-hidden bg-white/5" 
+      className="w-full rounded-xl overflow-hidden bg-white/5" 
       style={{ height }} 
     />
   )

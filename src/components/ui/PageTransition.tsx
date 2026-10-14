@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { pageTransition } from '@/lib/motion'
@@ -9,15 +9,16 @@ interface PageTransitionProps {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const location = useLocation()
+  const shouldReduceMotion = useReducedMotion()
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
         key={location.pathname}
-        variants={pageTransition}
-        initial="initial"
-        animate="animate"
-        exit="exit"
+        variants={shouldReduceMotion ? undefined : pageTransition}
+        initial={shouldReduceMotion ? undefined : 'initial'}
+        animate={shouldReduceMotion ? undefined : 'animate'}
+        exit={shouldReduceMotion ? undefined : 'exit'}
       >
         {children}
       </motion.div>

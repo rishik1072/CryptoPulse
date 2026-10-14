@@ -21,6 +21,7 @@ import { useWatchlistStore } from '@/store/useWatchlistStore'
 import { ProfessionalOHLCChart } from '@/components/charts/ProfessionalOHLCChart'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
+import { SpotlightCard } from '@/components/reactbits/SpotlightCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { useCryptoNews } from '@/services/news'
@@ -225,14 +226,14 @@ export default function AssetDetail() {
     const score = change24h * 1.2 + (historical?.change30d ?? 0) * 0.25 + (volume && marketCap ? Math.min((volume / marketCap) * 40, 12) : 0)
 
     if (score > 8) {
-      return { label: 'Bullish', detail: 'Momentum is accelerating with strong live flow.', tone: 'text-emerald-400' }
+      return { label: 'Bullish', detail: 'Momentum is accelerating with strong live flow.', tone: 'text-[#00E676]' }
     }
 
     if (score < -8) {
-      return { label: 'Risk-off', detail: 'Selling pressure is outweighing buying demand.', tone: 'text-rose-400' }
+      return { label: 'Risk-off', detail: 'Selling pressure is outweighing buying demand.', tone: 'text-[#FF5252]' }
     }
 
-    return { label: 'Balanced', detail: 'The market is trading with mixed conviction.', tone: 'text-amber-400' }
+    return { label: 'Balanced', detail: 'The market is trading with mixed conviction.', tone: 'text-[#FFB300]' }
   }, [change24h, historical, marketCap, volume])
 
   const topTicker = useMemo(() => {
@@ -247,17 +248,17 @@ export default function AssetDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-          <Skeleton className="h-20 w-20 rounded-2xl" />
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-6 w-32" />
+      <div className="space-y-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <Skeleton className="h-16 w-16 rounded-xl" />
+          <div className="flex-1 space-y-2.5">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-5 w-32" />
           </div>
         </div>
-        <Skeleton className="h-[420px] w-full rounded-3xl" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-3xl" />)}
+        <Skeleton className="h-[420px] w-full rounded-xl" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       </div>
     )
@@ -268,17 +269,17 @@ export default function AssetDetail() {
     return (
       <div className="flex h-[60vh] items-center justify-center p-4">
         <GlassCard className="max-w-md text-center p-8">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-[#F0F4F8]">
             {isRateLimited ? 'Rate limit exceeded' : 'Unable to load asset'}
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[#94A3B8]">
             {isRateLimited
               ? 'CoinGecko request quota reached (HTTP 429). Live price stream remains active, but historical metrics need a short cooldown.'
               : error?.message || 'The requested asset data could not be retrieved. Please try again later.'}
           </p>
           <Link
             to="/markets"
-            className="mt-6 inline-block rounded-2xl bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950"
+            className="mt-6 inline-block rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-5 py-2 text-sm font-semibold text-slate-950 transition-colors shadow-sm"
           >
             Back to Markets
           </Link>
@@ -288,72 +289,72 @@ export default function AssetDetail() {
   }
 
   const stats = [
-    { label: 'Volume', value: marketVolume.volume, prefix: marketVolume.unit === 'USD' ? '$' : '', decimals: 0 },
+    { label: 'Volume (24H)', value: marketVolume.volume, prefix: marketVolume.unit === 'USD' ? '$' : '', decimals: 0 },
     { label: 'Market Cap', value: marketCap, prefix: '$', decimals: 0 },
-    { label: 'Rank', value: rank || 1, prefix: '#', decimals: 0 },
-    { label: 'Supply', value: supply, suffix: ` ${coin.symbol.toUpperCase()}`, decimals: 0 },
+    { label: 'Market Rank', value: rank || 1, prefix: '#', decimals: 0 },
+    { label: 'Circulating Supply', value: supply, suffix: ` ${coin.symbol.toUpperCase()}`, decimals: 0 },
   ]
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 sm:space-y-10">
-      <GlassCard className="overflow-hidden border border-white/10 bg-[linear-gradient(120deg,rgba(15,23,42,0.94),rgba(7,11,29,0.96))] p-0 shadow-premium">
-        <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="flex flex-col gap-6">
+    <div className="mx-auto max-w-[1720px] space-y-4">
+      <div className="rounded-xl border border-[#262D38] bg-[#151921] p-5 sm:p-6 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="flex flex-col justify-between gap-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <img src={coin.image.large} alt={coin.name} className="h-16 w-16 rounded-2xl border border-white/10" />
+                <img src={coin.image.large} alt={coin.name} className="h-14 w-14 rounded-xl border border-[#262D38] bg-[#1E232E]" />
                 <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">{coin.name}</h1>
-                    <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-slate-400">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="text-2xl font-bold tracking-tight text-[#F0F4F8] sm:text-3xl">{coin.name}</h1>
+                    <div className="rounded-md border border-[#262D38] bg-[#1E232E] px-2 py-0.5 text-xs font-mono font-medium uppercase text-[#94A3B8]">
                       {coin.symbol.toUpperCase()}
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <div className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                    <div className="text-2xl font-bold tracking-tight text-[#F0F4F8] sm:text-3xl font-mono tabular-nums">
                       {currentPrice !== null ? (
                         `$${currentPrice.toLocaleString(undefined, {
                           minimumFractionDigits: currentPrice >= 1 ? 2 : 4,
                           maximumFractionDigits: currentPrice >= 1 ? 2 : 6,
                         })}`
                       ) : (
-                        <span className="text-slate-400 font-normal">—</span>
+                        <span className="text-[#94A3B8] font-normal">—</span>
                       )}
                     </div>
                     {resolved.source === 'binance-live' && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#00E676]/10 border border-[#00E676]/30 px-2 py-0.5 text-xs font-medium text-[#00E676] font-mono">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#00E676] animate-pulse" />
                         Live
                       </span>
                     )}
                     {resolved.source === 'binance-stale' && (
-                      <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
+                      <span className="inline-flex items-center rounded-lg bg-[#FFB300]/10 border border-[#FFB300]/30 px-2 py-0.5 text-xs font-medium text-[#FFB300] font-mono">
                         Stale
                       </span>
                     )}
                     {resolved.source === 'coingecko' && (
-                      <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-xs font-medium text-blue-400">
+                      <span className="inline-flex items-center rounded-lg bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 text-xs font-medium text-sky-400 font-mono">
                         CoinGecko
                       </span>
                     )}
                     {resolved.source === 'unavailable' && (
-                      <span className="inline-flex items-center rounded-full bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 text-xs font-medium text-slate-400">
-                        Price Unavailable
+                      <span className="inline-flex items-center rounded-lg bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 text-xs font-medium text-[#94A3B8]">
+                        Unavailable
                       </span>
                     )}
                     {resolved.change24h !== null ? (
-                      <div className={`flex items-center gap-1 text-lg font-medium ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isPositive ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                      <div className={`flex items-center gap-1 text-sm font-semibold font-mono tabular-nums ${isPositive ? 'text-[#00E676]' : 'text-[#FF5252]'}`}>
+                        {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                         {change24h.toFixed(2)}%
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-400 font-normal">—</div>
+                      <div className="text-xs text-[#94A3B8] font-normal">—</div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => {
                     const isWatched = watchlistItems.some(w => w.coinId === coinId)
@@ -368,22 +369,22 @@ export default function AssetDetail() {
                       })
                     }
                   }}
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 transition-all hover:bg-white/10"
+                  className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] cursor-pointer"
                 >
-                  <Star className={`h-4 w-4 ${watchlistItems.some(w => w.coinId === coinId) ? 'fill-amber-400 text-amber-400' : 'text-slate-400'}`} />
+                  <Star className={`h-3.5 w-3.5 ${watchlistItems.some(w => w.coinId === coinId) ? 'fill-[#FFB300] text-[#FFB300]' : 'text-[#94A3B8]'}`} />
                   {watchlistItems.some(w => w.coinId === coinId) ? 'Watching' : 'Watchlist'}
                 </button>
-                <button className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 transition-all hover:bg-white/10">
-                  <Share2 className="h-4 w-4" /> Share
+                <button className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] cursor-pointer">
+                  <Share2 className="h-3.5 w-3.5 text-[#94A3B8]" /> Share
                 </button>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {stats.map((stat, index) => (
-                <div key={index} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{stat.label}</div>
-                  <div className="mt-2 text-xl font-semibold tracking-tight text-white">
+                <SpotlightCard key={index} className="p-3.5">
+                  <div className="text-[11px] uppercase tracking-wider font-medium text-[#94A3B8]">{stat.label}</div>
+                  <div className="mt-1.5 text-lg font-bold tracking-tight text-[#F0F4F8] font-mono tabular-nums">
                     <AnimatedCounter
                       value={stat.value}
                       prefix={stat.prefix}
@@ -391,56 +392,58 @@ export default function AssetDetail() {
                       decimals={stat.decimals}
                     />
                   </div>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-              <Zap className="h-4 w-4 text-amber-400" /> Quick actions
-            </div>
-            <div className="mt-4 space-y-3">
-              <button
-                onClick={() => {
-                  setTradeMode('buy')
-                  setIsTradeOpen(true)
-                }}
-                className="flex w-full items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-left text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/20"
-              >
-                <span>Quick Buy</span>
-                <ArrowRightLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => {
-                  setTradeMode('sell')
-                  setIsTradeOpen(true)
-                }}
-                className="flex w-full items-center justify-between rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-left text-sm font-medium text-rose-300 transition hover:bg-rose-500/20"
-              >
-                <span>Quick Sell</span>
-                <ArrowRightLeft className="h-4 w-4 rotate-180" />
-              </button>
-            </div>
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-              <div className="flex items-center gap-2 text-slate-200">
-                <BrainCircuit className="h-4 w-4 text-cyan-400" /> Daily signal
+          <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4.5 sm:p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#F0F4F8]">
+                <Zap className="h-3.5 w-3.5 text-[#FFB300]" /> Fast Execution
               </div>
-              <p className="mt-2 leading-6">{sentiment.detail}</p>
+              <div className="mt-3.5 space-y-2.5">
+                <button
+                  onClick={() => {
+                    setTradeMode('buy')
+                    setIsTradeOpen(true)
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg border border-[#00E676]/30 bg-[#00E676]/10 px-3.5 py-2.5 text-left text-xs font-semibold text-[#00E676] transition hover:bg-[#00E676]/20 cursor-pointer"
+                >
+                  <span>Quick Buy {coin.symbol.toUpperCase()}</span>
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setTradeMode('sell')
+                    setIsTradeOpen(true)
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg border border-[#FF5252]/30 bg-[#FF5252]/10 px-3.5 py-2.5 text-left text-xs font-semibold text-[#FF5252] transition hover:bg-[#FF5252]/20 cursor-pointer"
+                >
+                  <span>Quick Sell {coin.symbol.toUpperCase()}</span>
+                  <ArrowRightLeft className="h-3.5 w-3.5 rotate-180" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 rounded-lg border border-[#262D38] bg-[#0B0E14] p-3 text-xs text-[#F0F4F8]">
+              <div className="flex items-center gap-1.5 font-medium text-[#F0F4F8]">
+                <BrainCircuit className="h-3.5 w-3.5 text-[#FFB300]" /> Momentum Assessment
+              </div>
+              <p className="mt-1.5 text-[#94A3B8] leading-relaxed text-[11px]">{sentiment.detail}</p>
             </div>
           </div>
         </div>
-      </GlassCard>
+      </div>
 
-      <GlassCard className="overflow-hidden p-0">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-4 py-5 sm:px-8">
+      <div className="rounded-xl border border-[#262D38] bg-[#151921] overflow-hidden shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#262D38] px-5 py-4">
           <div>
-            <div className="text-lg font-semibold tracking-tight">Professional Trading Chart</div>
-            <div className="text-sm text-slate-400">Real-time price feed • Coingecko and Binance data</div>
+            <div className="text-base font-semibold tracking-tight text-[#F0F4F8]">Interactive Technical Chart</div>
+            <div className="text-xs text-[#94A3B8]">Real-time candlesticks with volume analysis</div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {['Momentum', 'Liquidity', 'Trend'].map((indicator) => (
-              <div key={indicator} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
+              <div key={indicator} className="rounded-md border border-[#262D38] bg-[#1E232E] px-2.5 py-1 text-xs font-medium text-[#94A3B8]">
                 {indicator}
               </div>
             ))}
@@ -450,32 +453,32 @@ export default function AssetDetail() {
         <div className="p-4 sm:p-6">
           <ProfessionalOHLCChart coinId={coinId || ''} symbol={coin.symbol.toUpperCase()} />
         </div>
-      </GlassCard>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <GlassCard className="card-sheen">
-          <div className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Newspaper className="h-5 w-5 text-cyan-400" /> News
+        <GlassCard>
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
+            <Newspaper className="h-4 w-4 text-[#FFB300]" /> Recent News
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {news?.map((item) => (
-              <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="block rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10">
-                <div className="text-sm font-medium text-white">{item.title}</div>
-                <div className="mt-2 text-xs uppercase tracking-[0.24em] text-slate-400">{item.source}</div>
+              <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="block rounded-lg border border-[#262D38] bg-[#0B0E14] p-3 transition hover:bg-[#1E232E] group">
+                <div className="text-xs font-medium text-[#F0F4F8] group-hover:text-[#FFB300] transition-colors line-clamp-2">{item.title}</div>
+                <div className="mt-2 text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">{item.source}</div>
               </a>
             ))}
           </div>
         </GlassCard>
 
-        <GlassCard className="card-sheen">
-          <div className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Activity className="h-5 w-5 text-emerald-400" /> Events
+        <GlassCard>
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
+            <Activity className="h-4 w-4 text-[#00E676]" /> Ecosystem Updates
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {(statusUpdates?.status_updates ?? []).slice(0, 4).map((event, index) => (
-              <div key={`${event.category}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <div className="text-sm font-medium text-white">{event.description}</div>
-                <div className="mt-2 flex items-center justify-between text-xs uppercase tracking-[0.24em] text-slate-400">
+              <div key={`${event.category}-${index}`} className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3">
+                <div className="text-xs font-medium text-[#F0F4F8] line-clamp-2">{event.description}</div>
+                <div className="mt-2 flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">
                   <span>{event.category}</span>
                   <span>{new Date(event.created_at).toLocaleDateString()}</span>
                 </div>
@@ -484,44 +487,44 @@ export default function AssetDetail() {
           </div>
         </GlassCard>
 
-        <GlassCard className="card-sheen">
-          <div className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Landmark className="h-5 w-5 text-violet-400" /> Whale activity
+        <GlassCard>
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
+            <Landmark className="h-4 w-4 text-[#FFB300]" /> Exchange Liquidity
           </div>
           <div className="space-y-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Largest exchange flow</div>
-              <div className="mt-2 text-xl font-semibold text-white">
-                {topTicker ? topTicker.market.name : 'Flow data syncing'}
+            <div className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3.5">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">Primary Exchange Venue</div>
+              <div className="mt-1.5 text-lg font-bold text-[#F0F4F8]">
+                {topTicker ? topTicker.market.name : 'Data syncing...'}
               </div>
-              <div className="mt-2 text-sm text-slate-300">
+              <div className="mt-1 text-xs text-[#94A3B8] font-mono tabular-nums">
                 {topTicker ? formatValue(topTicker.converted_volume.usd, '$') : formatValue(volume, '$')}
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Live volume intensity</div>
-              <div className="mt-2 text-xl font-semibold text-white">{formatValue(volume, '$')}</div>
-              <div className="mt-2 text-sm text-slate-300">Relative to market cap {marketCap ? `${((volume / marketCap) * 100).toFixed(1)}%` : '—'}</div>
+            <div className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3.5">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">24H Volume / Market Cap</div>
+              <div className="mt-1.5 text-lg font-bold text-[#F0F4F8] font-mono tabular-nums">{formatValue(volume, '$')}</div>
+              <div className="mt-1 text-xs text-[#94A3B8] font-mono tabular-nums">Turnover ratio: {marketCap ? `${((volume / marketCap) * 100).toFixed(2)}%` : '—'}</div>
             </div>
           </div>
         </GlassCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <GlassCard className="card-sheen">
-          <div className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <BarChart3 className="h-5 w-5 text-amber-400" /> Historical performance
+        <GlassCard>
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
+            <BarChart3 className="h-4 w-4 text-[#FFB300]" /> Historical Extremes
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              { label: '30D change', value: historical?.change30d != null ? historical.change30d : null, suffix: '%', decimals: 2 },
-              { label: 'ATH', value: ath > 0 ? ath : null, prefix: '$', decimals: ath < 1 ? 4 : 2 },
-              { label: 'ATL', value: atl > 0 ? atl : null, prefix: '$', decimals: atl < 1 ? 4 : 2 },
-              { label: 'Current vs ATH', value: ath > 0 && currentPrice != null ? ((currentPrice / ath) * 100 - 100) : null, suffix: '%', decimals: 2 },
+              { label: '30D Trailing Return', value: historical?.change30d != null ? historical.change30d : null, suffix: '%', decimals: 2 },
+              { label: 'All-Time High (ATH)', value: ath > 0 ? ath : null, prefix: '$', decimals: ath < 1 ? 4 : 2 },
+              { label: 'All-Time Low (ATL)', value: atl > 0 ? atl : null, prefix: '$', decimals: atl < 1 ? 4 : 2 },
+              { label: 'Drawdown from ATH', value: ath > 0 && currentPrice != null ? ((currentPrice / ath) * 100 - 100) : null, suffix: '%', decimals: 2 },
             ].map((item, index) => (
-              <div key={index} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.24em] text-slate-400">{item.label}</div>
-                <div className="mt-2 text-xl font-semibold text-white">
+              <div key={index} className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3.5">
+                <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">{item.label}</div>
+                <div className="mt-1.5 text-base font-bold text-[#F0F4F8] font-mono tabular-nums">
                   {item.value !== null ? (
                     <AnimatedCounter
                       value={item.value}
@@ -530,7 +533,7 @@ export default function AssetDetail() {
                       decimals={item.decimals}
                     />
                   ) : (
-                    <span className="text-slate-400 font-normal">—</span>
+                    <span className="text-[#94A3B8] font-normal">—</span>
                   )}
                 </div>
               </div>
@@ -538,24 +541,24 @@ export default function AssetDetail() {
           </div>
         </GlassCard>
 
-        <GlassCard className="card-sheen">
-          <div className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Sparkles className="h-5 w-5 text-fuchsia-400" /> Sentiment
+        <GlassCard>
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
+            <Sparkles className="h-4 w-4 text-[#FFB300]" /> Market Conviction
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className={`text-2xl font-semibold ${sentiment.tone}`}>{sentiment.label}</div>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{sentiment.detail}</p>
-            <div className="mt-4 flex items-center gap-2 text-sm text-slate-400">
-              <Clock3 className="h-4 w-4" /> Updated from live market data
+          <div className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-4">
+            <div className={`text-xl font-bold ${sentiment.tone}`}>{sentiment.label}</div>
+            <p className="mt-2 text-xs leading-relaxed text-[#F0F4F8]">{sentiment.detail}</p>
+            <div className="mt-4 flex items-center gap-1.5 text-[11px] text-[#94A3B8] font-mono">
+              <Clock3 className="h-3.5 w-3.5" /> Synthesized from live book flow & volume
             </div>
           </div>
         </GlassCard>
       </div>
 
-      <GlassCard className="card-sheen">
-        <div className="mb-4 text-lg font-semibold tracking-tight">About {coin.name}</div>
+      <GlassCard>
+        <div className="mb-3 text-base font-semibold tracking-tight text-[#F0F4F8]">Asset Profile: {coin.name}</div>
         <div
-          className="prose prose-invert max-w-none text-[15px] leading-7 text-slate-300"
+          className="prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed text-[#94A3B8]"
           dangerouslySetInnerHTML={{
             __html: sanitizeHtml(
               coin.description.en
@@ -564,15 +567,15 @@ export default function AssetDetail() {
             ),
           }}
         />
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap gap-2.5">
           {coin.links.homepage[0] && (
-            <a href={coin.links.homepage[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
-              Website <ExternalLink className="h-3.5 w-3.5" />
+            <a href={coin.links.homepage[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] hover:text-[#FFB300]">
+              Official Website <ExternalLink className="h-3 w-3" />
             </a>
           )}
           {coin.links.repos_url.github[0] && (
-            <a href={coin.links.repos_url.github[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-sm transition hover:bg-white/10">
-              GitHub
+            <a href={coin.links.repos_url.github[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] hover:text-[#FFB300]">
+              Source Repository
             </a>
           )}
         </div>
