@@ -73,6 +73,10 @@ export const useAlertStore = create<AlertState>()((set, get) => ({
 
   initializeUser: async (userId: string) => {
     const cached = loadFromUserCache(userId)
+    if (userId.startsWith('demo-')) {
+      set({ userId, alerts: cached, isLoading: false, error: null })
+      return
+    }
     set({ userId, alerts: cached, isLoading: true, error: null })
 
     try {

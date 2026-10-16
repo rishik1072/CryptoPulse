@@ -67,6 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             useWatchlistStore.getState().initializeUser(initialSession.user.id)
             useAlertStore.getState().initializeUser(initialSession.user.id)
             initializeUserData(initialSession.user.id)
+          } else if (useAuthStore.getState().user?.id === 'demo-user-1') {
+            usePortfolioStore.getState().initializeUser('demo-user-1')
+            useWatchlistStore.getState().initializeUser('demo-user-1')
+            useAlertStore.getState().initializeUser('demo-user-1')
           } else {
             setUser(null)
             setSession(null)
@@ -82,13 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Auth initialization error:', error)
         if (mounted) {
-          setUser(null)
-          setSession(null)
-          setAuthUser(null)
-          setAuthenticated(false)
-          usePortfolioStore.getState().clearPortfolio()
-          useWatchlistStore.getState().clearWatchlist()
-          useAlertStore.getState().clearAlerts()
+          if (useAuthStore.getState().user?.id !== 'demo-user-1') {
+            setUser(null)
+            setSession(null)
+            setAuthUser(null)
+            setAuthenticated(false)
+            usePortfolioStore.getState().clearPortfolio()
+            useWatchlistStore.getState().clearWatchlist()
+            useAlertStore.getState().clearAlerts()
+          }
           setLoading(false)
           setInitialized(true)
         }
@@ -180,12 +186,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const storeUser = useAuthStore((s) => s.user)
+  const storeAuth = useAuthStore((s) => s.isAuthenticated)
+
+  const effectiveUser = user || (storeAuth && storeUser ? ({
+    id: storeUser.id,
+    email: storeUser.email,
+    app_metadata: { provider: storeUser.provider },
+    user_metadata: {
+      full_name: storeUser.name,
+      avatar_url: storeUser.avatarUrl,
+      phone: storeUser.phone,
+    },
+    aud: 'authenticated',
+    created_at: storeUser.createdAt,
+  } as unknown as SupabaseUser) : null)
+
   return (
     <AuthContext.Provider value={{
-      user,
+      user: effectiveUser,
       session,
-      loading,
-      initialized,
+      loading: storeAuth && storeUser ? false : loading,
+      initialized: storeAuth && storeUser ? true : initialized,
       signOut,
       refreshSession,
     }}>

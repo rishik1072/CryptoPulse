@@ -72,6 +72,10 @@ export const usePortfolioStore = create<PortfolioState>()((set, get) => ({
   initializeUser: async (userId: string) => {
     // Scoped hydration prevents cross-user dataset leakage
     const cached = loadFromUserCache(userId)
+    if (userId.startsWith('demo-')) {
+      set({ userId, holdings: cached, isLoading: false, error: null })
+      return
+    }
     set({ userId, holdings: cached, isLoading: true, error: null })
 
     try {

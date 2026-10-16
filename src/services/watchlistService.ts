@@ -59,6 +59,9 @@ export async function getUserDefaultWatchlist(userId: string): Promise<string> {
 }
 
 export async function fetchUserWatchlist(userId: string): Promise<WatchlistItem[]> {
+  if (userId.startsWith('demo-')) {
+    return []
+  }
   const { data, error } = await supabase
     .from('watchlist_items')
     .select('*')

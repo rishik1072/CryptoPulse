@@ -48,6 +48,9 @@ export function mapDbAlertToModel(row: DbAlertRow): Alert {
 }
 
 export async function fetchUserAlerts(userId: string): Promise<Alert[]> {
+  if (userId.startsWith('demo-')) {
+    return []
+  }
   const { data, error } = await supabase
     .from('alerts')
     .select('*')

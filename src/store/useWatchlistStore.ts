@@ -60,6 +60,10 @@ export const useWatchlistStore = create<WatchlistState>()((set, get) => ({
 
   initializeUser: async (userId: string) => {
     const cached = loadFromUserCache(userId)
+    if (userId.startsWith('demo-')) {
+      set({ userId, items: cached, isLoading: false, error: null })
+      return
+    }
     set({ userId, items: cached, isLoading: true, error: null })
 
     try {

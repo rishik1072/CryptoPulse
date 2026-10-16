@@ -87,6 +87,12 @@ export default function SignIn() {
     }
   }
 
+  const handleDemoLogin = () => {
+    useAuthStore.getState().signInDemo()
+    toast.success('Signed in as Demo Investor!')
+    navigate('/', { replace: true })
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground font-sans">
       <div className="w-full max-w-[400px] space-y-4">
@@ -206,6 +212,19 @@ export default function SignIn() {
             >
               <Globe className="h-4 w-4 text-[#94A3B8]" />
               <span>{isGoogleLoading ? 'Connecting to Google…' : 'Continue with Google'}</span>
+            </button>
+          </div>
+
+          {/* Instant Demo Access Button */}
+          <div className="mt-3">
+            <button
+              type="button"
+              id="demo-login-btn"
+              onClick={handleDemoLogin}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-[#FFB300]/40 bg-[#FFB300]/10 hover:bg-[#FFB300]/20 px-4 py-2 text-xs font-semibold text-[#FFB300] transition-all cursor-pointer shadow-sm hover:shadow-[#FFB300]/10"
+            >
+              <Sparkles className="h-4 w-4 text-[#FFB300]" />
+              <span>Instant Demo Mode (1-Click Explore)</span>
             </button>
           </div>
 

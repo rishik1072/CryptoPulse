@@ -84,6 +84,7 @@ interface AuthState {
   addActivityLog: (action: string) => void
   uploadAvatar: (file: File) => Promise<string | null>
   signInWithGoogle: () => Promise<boolean>
+  signInDemo: () => void
   initializeUserData: (userId: string) => Promise<void>
   
   // Internal sync methods for AuthProvider
@@ -613,6 +614,187 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false, error: formatAuthError(err) })
           return null
         }
+      },
+
+      signInDemo: () => {
+        const demoId = 'demo-user-1'
+        const demoUser: AuthUser = {
+          id: demoId,
+          name: 'Alexander Vance',
+          email: 'alex.vance@cryptopulse.io',
+          createdAt: '2024-01-15T08:00:00.000Z',
+          provider: 'local',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        }
+        const demoSession = {
+          id: 'session_demo_current',
+          device: 'Chrome on macOS (Current Terminal)',
+          location: 'New York, US',
+          lastSeen: 'Active now',
+          current: true,
+        }
+
+        // Seed sample portfolio if not already present
+        try {
+          const portKey = `cryptopulse-portfolio-${demoId}`
+          if (!localStorage.getItem(portKey)) {
+            const sampleHoldings = [
+              {
+                id: 'demo-h1',
+                coinId: 'bitcoin',
+                symbol: 'btc',
+                name: 'Bitcoin',
+                image: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+                quantity: 1.45,
+                avgBuyPrice: 62450,
+                purchaseDate: '2024-03-12',
+              },
+              {
+                id: 'demo-h2',
+                coinId: 'ethereum',
+                symbol: 'eth',
+                name: 'Ethereum',
+                image: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+                quantity: 8.5,
+                avgBuyPrice: 2840,
+                purchaseDate: '2024-04-05',
+              },
+              {
+                id: 'demo-h3',
+                coinId: 'solana',
+                symbol: 'sol',
+                name: 'Solana',
+                image: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+                quantity: 45.0,
+                avgBuyPrice: 132.5,
+                purchaseDate: '2024-05-18',
+              },
+              {
+                id: 'demo-h4',
+                coinId: 'chainlink',
+                symbol: 'link',
+                name: 'Chainlink',
+                image: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png',
+                quantity: 250,
+                avgBuyPrice: 14.8,
+                purchaseDate: '2024-06-01',
+              },
+            ]
+            localStorage.setItem(portKey, JSON.stringify(sampleHoldings))
+          }
+          const watchKey = `cryptopulse-watchlist-${demoId}`
+          const rawWatch = localStorage.getItem(watchKey)
+          if (!rawWatch || rawWatch.includes('"bitcoin","ethereum"')) {
+            const sampleWatchlist = [
+              {
+                id: 'demo-w1',
+                coinId: 'bitcoin',
+                symbol: 'BTC',
+                name: 'Bitcoin',
+                image: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+                pinned: true,
+                addedAt: '2024-01-10T10:00:00Z',
+              },
+              {
+                id: 'demo-w2',
+                coinId: 'ethereum',
+                symbol: 'ETH',
+                name: 'Ethereum',
+                image: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+                pinned: true,
+                addedAt: '2024-01-11T10:00:00Z',
+              },
+              {
+                id: 'demo-w3',
+                coinId: 'solana',
+                symbol: 'SOL',
+                name: 'Solana',
+                image: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+                pinned: false,
+                addedAt: '2024-02-15T10:00:00Z',
+              },
+              {
+                id: 'demo-w4',
+                coinId: 'ripple',
+                symbol: 'XRP',
+                name: 'XRP',
+                image: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
+                pinned: false,
+                addedAt: '2024-02-20T10:00:00Z',
+              },
+              {
+                id: 'demo-w5',
+                coinId: 'chainlink',
+                symbol: 'LINK',
+                name: 'Chainlink',
+                image: 'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png',
+                pinned: false,
+                addedAt: '2024-03-05T10:00:00Z',
+              },
+            ]
+            localStorage.setItem(watchKey, JSON.stringify(sampleWatchlist))
+          }
+          const alertKey = `cryptopulse-alerts-${demoId}`
+          if (!localStorage.getItem(alertKey)) {
+            const sampleAlerts = [
+              {
+                id: 'demo-a1',
+                symbol: 'BTC',
+                type: 'PRICE_ABOVE',
+                value: 85000,
+                enabled: true,
+                triggered: false,
+                createdAt: new Date().toISOString(),
+              },
+              {
+                id: 'demo-a2',
+                symbol: 'ETH',
+                type: 'PRICE_BELOW',
+                value: 2350,
+                enabled: true,
+                triggered: false,
+                createdAt: new Date().toISOString(),
+              },
+              {
+                id: 'demo-a3',
+                symbol: 'SOL',
+                type: 'PERCENT_CHANGE',
+                value: 5,
+                enabled: true,
+                triggered: true,
+                createdAt: new Date().toISOString(),
+              },
+            ]
+            localStorage.setItem(alertKey, JSON.stringify(sampleAlerts))
+          }
+        } catch {}
+
+        set({
+          user: demoUser,
+          isAuthenticated: true,
+          sessions: [
+            demoSession,
+            {
+              id: 'session_demo_2',
+              device: 'CryptoPulse Mobile iOS',
+              location: 'New York, US',
+              lastSeen: '2 hours ago',
+              current: false,
+            },
+          ],
+          activityLogs: [
+            { id: 'log-1', action: 'Logged into Institutional Terminal', timestamp: new Date().toISOString() },
+            { id: 'log-2', action: 'Executed buy order: 0.25 BTC', timestamp: new Date(Date.now() - 3600000 * 4).toISOString() },
+            { id: 'log-3', action: 'Added Solana to Priority Watchlist', timestamp: new Date(Date.now() - 3600000 * 24).toISOString() },
+          ],
+          isLoading: false,
+          error: null,
+          success: 'Welcome back, Alexander Vance.',
+        })
+
+        usePortfolioStore.getState().initializeUser(demoId)
+        useWatchlistStore.getState().initializeUser(demoId)
+        useAlertStore.getState().initializeUser(demoId)
       },
 
       // Internal sync methods for AuthProvider

@@ -66,6 +66,9 @@ export async function getUserDefaultPortfolio(userId: string): Promise<string> {
 }
 
 export async function fetchUserHoldings(userId: string): Promise<Holding[]> {
+  if (userId.startsWith('demo-')) {
+    return []
+  }
   const { data, error } = await supabase
     .from('holdings')
     .select('*')
