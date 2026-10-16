@@ -359,6 +359,7 @@ export default function Portfolio() {
                       outerRadius={72}
                       paddingAngle={3}
                       dataKey="value"
+                      isAnimationActive={false}
                     >
                       {allocationData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />

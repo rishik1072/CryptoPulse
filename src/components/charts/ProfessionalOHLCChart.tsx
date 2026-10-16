@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo } from 'react'
+import { useEffect, useRef, useState, memo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts'
 import type { ISeriesApi, CandlestickData, Time } from 'lightweight-charts'
@@ -34,13 +34,18 @@ export const ProfessionalOHLCChart = memo(({
   const chartInstance = useRef<ReturnType<typeof createChart> | null>(null)
   const candleSeries = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const lastCandleTime = useRef<number | null>(null)
+  const currentCandleRef = useRef<CandlestickData | null>(null)
 
   const { preferences } = useAuthStore()
   const themeRef = useRef(preferences.theme)
   themeRef.current = preferences.theme
 
-  const { prices } = useLivePriceStore()
-  const livePrice = prices[symbol.toUpperCase()] || prices[symbol]
+  // Subscribe strictly to this symbol's live updates to prevent re-renders on unrelated ticker ticks
+  const symUpper = symbol.toUpperCase()
+  const symLower = symbol.toLowerCase()
+  const livePrice = useLivePriceStore(
+    useCallback((state) => state.prices[symUpper] || state.prices[symLower], [symUpper, symLower])
+  )
 
   const days = TIMEFRAMES[timeframe] || 7
   const { data: ohlcData, isLoading, isError, error, refetch } = useOHLCData(coinId, days)
@@ -55,7 +60,7 @@ export const ProfessionalOHLCChart = memo(({
     const gridColor = isCurrentlyDark ? 'rgba(38, 45, 56, 0.45)' : 'rgba(226, 232, 240, 0.8)'
 
     const chart = createChart(chartRef.current, {
-      width: chartRef.current.clientWidth,
+      width: Math.max(chartRef.current.clientWidth, 100),
       height,
       layout: {
         background: { type: ColorType.Solid, color: bgColor },
@@ -83,7 +88,7 @@ export const ProfessionalOHLCChart = memo(({
     candleSeries.current = candle
 
     const resizeObserver = new ResizeObserver(() => {
-      if (chartRef.current && chartInstance.current) {
+      if (chartRef.current && chartInstance.current && chartRef.current.clientWidth > 0) {
         chartInstance.current.resize(chartRef.current.clientWidth, height)
       }
     })
@@ -95,6 +100,7 @@ export const ProfessionalOHLCChart = memo(({
         chart.remove()
         chartInstance.current = null
         candleSeries.current = null
+        currentCandleRef.current = null
       } catch {
         // Safe disposal
       }
@@ -149,34 +155,41 @@ export const ProfessionalOHLCChart = memo(({
     try {
       candleSeries.current.setData(candleData)
       if (candleData.length > 0) {
-        lastCandleTime.current = Number(candleData[candleData.length - 1].time)
+        const lastCandle = candleData[candleData.length - 1]
+        lastCandleTime.current = Number(lastCandle.time)
+        currentCandleRef.current = { ...lastCandle }
+        // Ensure chart scales properly to match the selected timeframe data
+        chartInstance.current?.timeScale().fitContent()
       }
     } catch {
       // Prevent chart crash on unexpected series error
     }
   }, [ohlcData])
 
-  // Live price update (update last candle bounds without fabricating)
+  // Live price incremental update (update active candle bounds without resetting data)
   useEffect(() => {
-    if (!livePrice || !candleSeries.current || !lastCandleTime.current || !ohlcData || ohlcData.length === 0) {
+    if (!livePrice || !candleSeries.current || !currentCandleRef.current) {
       return
     }
 
-    const last = ohlcData[ohlcData.length - 1]
+    const current = currentCandleRef.current
     const updatedCandle: CandlestickData = {
-      time: lastCandleTime.current as Time,
-      open: last.open,
-      high: Math.max(last.high, livePrice.price),
-      low: Math.min(last.low, livePrice.price),
+      time: current.time,
+      open: current.open,
+      high: Math.max(current.high, livePrice.price),
+      low: Math.min(current.low, livePrice.price),
       close: livePrice.price,
     }
+
+    // Update in-memory reference
+    currentCandleRef.current = updatedCandle
 
     try {
       candleSeries.current.update(updatedCandle)
     } catch {
       // Safe update
     }
-  }, [livePrice, ohlcData])
+  }, [livePrice])
 
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }} className="relative">

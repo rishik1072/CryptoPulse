@@ -22,21 +22,68 @@ export const apiRetryConfig = {
     if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 429) {
       return false
     }
+    // Never retry on HTTP 404 (non-recoverable resource not found)
+    if (error instanceof ApiError && error.status === 404) {
+      return false
+    }
+    if (error && typeof error === 'object' && 'status' in error && (error as { status: number }).status === 404) {
+      return false
+    }
     return failureCount < 1
   },
   retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
 }
 
-export async function fetchJsonSafely<T>(url: string, context: string): Promise<T> {
+export interface FetchOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+  headers?: HeadersInit
+}
+
+export async function fetchJsonSafely<T>(
+  url: string,
+  context: string,
+  options?: FetchOptions
+): Promise<T> {
   let res: Response
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
   try {
-    res = await fetch(url)
+    const fetchInit: RequestInit = {}
+
+    // Support AbortSignal & timeout
+    if (options?.signal || options?.timeoutMs) {
+      if (options?.timeoutMs && !options?.signal) {
+        const controller = new AbortController()
+        timeoutId = setTimeout(() => controller.abort(), options.timeoutMs)
+        fetchInit.signal = controller.signal
+      } else if (options?.signal) {
+        fetchInit.signal = options.signal
+      }
+    }
+
+    if (options?.headers) {
+      fetchInit.headers = options.headers
+    }
+
+    res = await fetch(url, fetchInit)
   } catch (err) {
+    if (timeoutId) clearTimeout(timeoutId)
+    // If request was actively cancelled by an external abort signal, rethrow
+    if (options?.signal?.aborted) {
+      throw err
+    }
     throw new ApiError(`Network failure while fetching ${context}: ${(err as Error).message}`)
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
   }
 
   if (res.status === 429) {
     throw new ApiError(`CoinGecko rate limit exceeded (HTTP 429) for ${context}. Please wait a moment.`, 429, true)
+  }
+
+  if (res.status === 404) {
+    throw new ApiError(`Asset or endpoint not found for ${context} (HTTP 404)`, 404, false)
   }
 
   if (!res.ok) {
@@ -241,5 +288,120 @@ export const useFearGreed = () => {
         timestamp: Date.now(),
       }),
     staleTime: Infinity,
+  })
+}
+
+export interface CoinDetail {
+  id: string
+  name: string
+  symbol: string
+  image: { large: string; thumb?: string; small?: string }
+  market_data: {
+    current_price: { usd: number }
+    market_cap: { usd: number }
+    total_volume: { usd: number }
+    circulating_supply: number
+    max_supply: number | null
+    ath: { usd: number }
+    atl: { usd: number }
+    price_change_percentage_24h: number
+    market_cap_rank?: number | null
+  }
+  description: { en: string }
+  links: {
+    homepage: string[]
+    blockchain_site: string[]
+    repos_url: { github: string[] }
+    twitter_screen_name: string
+    subreddit_url: string
+  }
+  categories: string[]
+}
+
+/**
+ * Fetches coin details with safe fallback to market endpoint on transient errors
+ */
+export async function getCoinDetail(coinId: string, signal?: AbortSignal): Promise<CoinDetail> {
+  const trimmed = coinId?.trim().toLowerCase()
+  if (!trimmed) {
+    throw new ApiError('Coin identifier cannot be empty', 400)
+  }
+
+  const encodedId = encodeURIComponent(trimmed)
+
+  // 1. Primary attempt: CoinGecko detailed coins endpoint
+  try {
+    const data = await fetchJsonSafely<CoinDetail>(
+      `${BASE_URL}/coins/${encodedId}?localization=false&tickers=false&community_data=false&developer_data=false`,
+      `coin details for ${trimmed}`,
+      { signal, timeoutMs: 10000 }
+    )
+    if (data && data.id && data.symbol && data.market_data) {
+      return data
+    }
+  } catch (err) {
+    // If the coin returned 404, it genuinely does not exist on provider
+    if (err instanceof ApiError && err.status === 404) {
+      throw err
+    }
+
+    // 2. Fallback attempt: Lightweight /coins/markets endpoint (higher CDN cache rate)
+    try {
+      const fallbackUrl = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${encodedId}&sparkline=false`
+      const markets = await fetchJsonSafely<CoinMarketData[]>(
+        fallbackUrl,
+        `fallback market data for ${trimmed}`,
+        { signal, timeoutMs: 8000 }
+      )
+      if (Array.isArray(markets) && markets.length > 0) {
+        const m = markets[0]
+        return {
+          id: m.id,
+          name: m.name,
+          symbol: m.symbol,
+          image: { large: m.image, small: m.image, thumb: m.image },
+          market_data: {
+            current_price: { usd: m.current_price },
+            market_cap: { usd: m.market_cap },
+            total_volume: { usd: m.total_volume },
+            circulating_supply: 0,
+            max_supply: null,
+            ath: { usd: 0 },
+            atl: { usd: 0 },
+            price_change_percentage_24h: m.price_change_percentage_24h ?? 0,
+            market_cap_rank: null,
+          },
+          description: { en: '' },
+          links: {
+            homepage: [],
+            blockchain_site: [],
+            repos_url: { github: [] },
+            twitter_screen_name: '',
+            subreddit_url: '',
+          },
+          categories: m.categories ?? [],
+        }
+      }
+    } catch {
+      // Fallback failed, rethrow original primary error
+    }
+
+    throw err
+  }
+
+  throw new ApiError(`Invalid coin detail response format for ${trimmed}`)
+}
+
+export const useCoinDetail = (coinId?: string, initialData?: CoinDetail) => {
+  const normalizedId = coinId?.trim().toLowerCase()
+
+  return useQuery<CoinDetail>({
+    queryKey: ['coin-detail', normalizedId],
+    queryFn: ({ signal }) => getCoinDetail(normalizedId!, signal),
+    enabled: Boolean(normalizedId),
+    initialData,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    ...apiRetryConfig,
   })
 }

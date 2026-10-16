@@ -262,6 +262,63 @@ export interface ResolvedAssetCandidate {
 }
 
 /**
+ * Authoritative mapping for well-known cryptocurrencies to prevent deriving
+ * arbitrary API identifiers when standard mappings exist.
+ */
+export const AUTHORITATIVE_ASSET_MAP: Record<string, { id: string; symbol: string; name: string }> = {
+  btc: { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
+  bitcoin: { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
+  eth: { id: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
+  ethereum: { id: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
+  sol: { id: 'solana', symbol: 'SOL', name: 'Solana' },
+  solana: { id: 'solana', symbol: 'SOL', name: 'Solana' },
+  xrp: { id: 'ripple', symbol: 'XRP', name: 'XRP' },
+  ripple: { id: 'ripple', symbol: 'XRP', name: 'XRP' },
+  doge: { id: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin' },
+  dogecoin: { id: 'dogecoin', symbol: 'DOGE', name: 'Dogecoin' },
+  bnb: { id: 'binancecoin', symbol: 'BNB', name: 'BNB' },
+  binancecoin: { id: 'binancecoin', symbol: 'BNB', name: 'BNB' },
+  ada: { id: 'cardano', symbol: 'ADA', name: 'Cardano' },
+  cardano: { id: 'cardano', symbol: 'ADA', name: 'Cardano' },
+  avax: { id: 'avalanche-2', symbol: 'AVAX', name: 'Avalanche' },
+  'avalanche-2': { id: 'avalanche-2', symbol: 'AVAX', name: 'Avalanche' },
+  link: { id: 'chainlink', symbol: 'LINK', name: 'Chainlink' },
+  chainlink: { id: 'chainlink', symbol: 'LINK', name: 'Chainlink' },
+  dot: { id: 'polkadot', symbol: 'DOT', name: 'Polkadot' },
+  polkadot: { id: 'polkadot', symbol: 'DOT', name: 'Polkadot' },
+  matic: { id: 'matic-network', symbol: 'MATIC', name: 'Polygon' },
+  'matic-network': { id: 'matic-network', symbol: 'MATIC', name: 'Polygon' },
+  polygon: { id: 'matic-network', symbol: 'MATIC', name: 'Polygon' },
+  uni: { id: 'uniswap', symbol: 'UNI', name: 'Uniswap' },
+  uniswap: { id: 'uniswap', symbol: 'UNI', name: 'Uniswap' },
+}
+
+/**
+ * Resolves a route or user input asset identifier into the canonical CoinGecko ID.
+ * e.g., 'eth' -> 'ethereum', 'BTC' -> 'bitcoin'.
+ */
+export function resolveAssetId(query: string, cachedMarkets?: CoinMarketData[]): string | null {
+  const trimmed = query?.trim().toLowerCase()
+  if (!trimmed) return null
+
+  // 1. Authoritative mapping
+  if (AUTHORITATIVE_ASSET_MAP[trimmed]) {
+    return AUTHORITATIVE_ASSET_MAP[trimmed].id
+  }
+
+  // 2. Check cached markets for exact ID or exact symbol
+  if (cachedMarkets && cachedMarkets.length > 0) {
+    const match = cachedMarkets.find(
+      (c) => c.id.toLowerCase() === trimmed || c.symbol.toLowerCase() === trimmed
+    )
+    if (match) return match.id
+  }
+
+  // 3. Fallback: if it contains valid characters, return trimmed lowercase
+  return trimmed
+}
+
+/**
  * Resolves verified cryptocurrency from user input, ranking candidates accurately:
  * 1. Exact ID or ticker match in cached market data
  * 2. Filter exact symbol matches in search results and rank by market_cap_rank
@@ -313,6 +370,18 @@ export function resolveCoinCandidate(
     }
   }
 
+  // 3. Check authoritative mapping fallback (if neither cache nor search has it, but it's a known symbol)
+  if (AUTHORITATIVE_ASSET_MAP[lower] && !searchResults.length) {
+    const auth = AUTHORITATIVE_ASSET_MAP[lower]
+    return {
+      id: auth.id,
+      name: auth.name,
+      symbol: auth.symbol,
+      image: '',
+    }
+  }
+
   return null
 }
+
 

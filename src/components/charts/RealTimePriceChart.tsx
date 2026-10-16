@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo } from 'react'
+import { useEffect, useRef, memo, useCallback } from 'react'
 import { createChart, ColorType, LineSeries } from 'lightweight-charts'
 import type { IChartApi, ISeriesApi, LineData, Time } from 'lightweight-charts'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
@@ -17,18 +17,19 @@ export const RealTimePriceChart = memo(({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Line'> | null>(null)
-  const dataPointsRef = useRef<LineData[]>([])
+  const isInitializedRef = useRef(false)
 
-  const { prices } = useLivePriceStore()
-
-  const currentPrice = prices[symbol]?.price
+  const symUpper = symbol.toUpperCase()
+  const currentPrice = useLivePriceStore(
+    useCallback((state) => state.prices[symUpper]?.price, [symUpper])
+  )
 
   // Initialize chart once
   useEffect(() => {
     if (!chartRef.current) return
 
     const chart = createChart(chartRef.current, {
-      width: chartRef.current.clientWidth,
+      width: Math.max(chartRef.current.clientWidth, 100),
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
@@ -70,10 +71,11 @@ export const RealTimePriceChart = memo(({
 
     chartInstance.current = chart
     seriesRef.current = lineSeries
+    isInitializedRef.current = false
 
     // Resize observer
     const resizeObserver = new ResizeObserver(() => {
-      if (chartRef.current && chartInstance.current) {
+      if (chartRef.current && chartInstance.current && chartRef.current.clientWidth > 0) {
         chartInstance.current.resize(
           chartRef.current.clientWidth, 
           height
@@ -88,31 +90,22 @@ export const RealTimePriceChart = memo(({
         chart.remove()
         chartInstance.current = null
         seriesRef.current = null
+        isInitializedRef.current = false
       } catch {
         // Safe cleanup
       }
     }
   }, [height, color])
 
-  // Efficiently append new price points without duplicate timestamps
+  // Incrementally append or update price points using O(1) series.update()
   useEffect(() => {
     if (!currentPrice || !seriesRef.current || !Number.isFinite(currentPrice)) return
 
     const now = Math.floor(Date.now() / 1000) as Time
-    const points = dataPointsRef.current
-    const last = points.length > 0 ? points[points.length - 1] : null
-
-    if (last && Number(last.time) === Number(now)) {
-      last.value = currentPrice
-    } else {
-      points.push({ time: now, value: currentPrice })
-      if (points.length > 80) {
-        points.shift()
-      }
-    }
+    const point: LineData = { time: now, value: currentPrice }
 
     try {
-      seriesRef.current.setData([...points])
+      seriesRef.current.update(point)
     } catch {
       // Safe update
     }

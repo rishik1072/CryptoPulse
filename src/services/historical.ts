@@ -72,11 +72,11 @@ export const useOHLCData = (coinId: string, days: number) => {
 
   return useQuery<OHLCData[]>({
     queryKey: ['ohlc', normalizedId, days],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!normalizedId) return []
 
       const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(normalizedId)}/ohlc?vs_currency=usd&days=${days}`
-      const raw = await fetchJsonSafely<unknown>(url, `OHLC data for ${normalizedId}`)
+      const raw = await fetchJsonSafely<unknown>(url, `OHLC data for ${normalizedId}`, { signal })
 
       if (!Array.isArray(raw)) {
         throw new ApiError('Unexpected OHLC response format: expected a 2D array')
@@ -85,6 +85,7 @@ export const useOHLCData = (coinId: string, days: number) => {
       return sanitizeOHLCData(raw)
     },
     enabled: !!normalizedId,
+    placeholderData: (prev) => prev,
     staleTime: 1000 * 60 * 15,
     gcTime: 1000 * 60 * 30,
     ...apiRetryConfig,

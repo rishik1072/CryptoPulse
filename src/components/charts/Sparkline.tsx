@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import { memo, useMemo, useCallback } from 'react'
+import { LineChart, Line } from 'recharts'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
 
 interface SparklinePoint {
@@ -12,29 +12,33 @@ interface SparklineProps {
   data?: number[]
 }
 
-export function Sparkline({ symbol, color = '#7c3aed', data: explicitData }: SparklineProps) {
-  const { prices, priceHistory } = useLivePriceStore()
+export const Sparkline = memo(function Sparkline({ symbol, color = '#7c3aed', data: explicitData }: SparklineProps) {
+  const symUpper = symbol ? symbol.toUpperCase() : ''
+  const hasExplicitData = Boolean(explicitData && explicitData.length > 0)
+
+  // Use targeted selectors to prevent re-rendering when other coins tick
+  const history = useLivePriceStore(
+    useCallback((state) => (!hasExplicitData && symUpper ? state.priceHistory[symUpper] : undefined), [hasExplicitData, symUpper])
+  )
+  const hasLivePrice = useLivePriceStore(
+    useCallback((state) => (!hasExplicitData && symUpper ? Boolean(state.prices[symUpper]) : false), [hasExplicitData, symUpper])
+  )
 
   const points = useMemo(() => {
     if (explicitData && explicitData.length > 0) {
       return explicitData.filter(Number.isFinite)
     }
 
-    if (symbol) {
-      const history = priceHistory[symbol.toUpperCase()] || []
-      if (history.length > 0) {
-        return history.filter(Number.isFinite)
-      }
+    if (history && history.length > 0) {
+      return history.filter(Number.isFinite)
     }
 
     return []
-  }, [explicitData, symbol, priceHistory])
+  }, [explicitData, history])
 
   const chartData = useMemo<SparklinePoint[]>(() => {
     return points.map((val) => ({ value: val }))
   }, [points])
-
-  const hasLivePrice = symbol ? Boolean(prices[symbol.toUpperCase()]) : false
 
   if (chartData.length < 2) {
     return (
@@ -52,19 +56,17 @@ export function Sparkline({ symbol, color = '#7c3aed', data: explicitData }: Spa
   }
 
   return (
-    <div className="h-8 w-20 -mx-1">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
-          <Line 
-            type="monotone" 
-            dataKey="value" 
-            stroke={color} 
-            strokeWidth={1.5} 
-            dot={false} 
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div className="h-8 w-20 -mx-1 overflow-hidden">
+      <LineChart width={80} height={32} data={chartData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+        <Line 
+          type="monotone" 
+          dataKey="value" 
+          stroke={color} 
+          strokeWidth={1.5} 
+          dot={false} 
+          isAnimationActive={false}
+        />
+      </LineChart>
     </div>
   )
-}
+})
