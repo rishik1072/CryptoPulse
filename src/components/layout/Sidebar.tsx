@@ -40,7 +40,7 @@ export function Sidebar() {
     <aside
       className={cn(
         'fixed inset-y-0 left-0 z-40 w-60 pt-14 sm:pt-15 lg:sticky lg:top-15 lg:h-[calc(100vh-3.75rem)] lg:pt-0',
-        'border-r border-border bg-surface transition-transform duration-200 ease-in-out',
+        'border-r border-border bg-[var(--sidebar-header)] transition-transform duration-200 ease-in-out',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}
     >
@@ -69,7 +69,7 @@ export function Sidebar() {
                     {isActive && (
                       <motion.div
                         layoutId="active-sidebar-pill"
-                        className="absolute inset-0 rounded-lg bg-[#FFB300]/10 border border-[#FFB300]/30"
+                        className="absolute inset-0 rounded-lg bg-accent/10 border border-accent/30"
                         transition={
                           shouldReduceMotion
                             ? { duration: 0 }
@@ -81,7 +81,7 @@ export function Sidebar() {
                       className={cn(
                         'relative z-10 flex h-7 w-7 items-center justify-center rounded-md transition-colors',
                         isActive
-                          ? 'bg-[#FFB300]/20 text-[#FFB300]'
+                          ? 'bg-accent/20 text-accent'
                           : 'bg-surface-elevated text-muted'
                       )}
                     >
@@ -97,7 +97,7 @@ export function Sidebar() {
                       <div
                         className={cn(
                           'text-[10px] truncate',
-                          isActive ? 'text-[#FFB300]/80' : 'text-muted'
+                          isActive ? 'text-accent/90' : 'text-muted'
                         )}
                       >
                         {item.subtitle}
@@ -112,8 +112,8 @@ export function Sidebar() {
 
         {/* Bottom "Upgrade to Pro" Card */}
         <div className="mt-4 rounded-xl border border-border bg-surface-elevated p-3 text-center">
-          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFB300]/15 text-[#FFB300] border border-[#FFB300]/25">
-            <Crown className="h-4 w-4 fill-[#FFB300] text-[#FFB300]" />
+          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent border border-accent/25">
+            <Crown className="h-4 w-4 fill-accent text-accent" />
           </div>
           <h4 className="text-xs font-semibold text-foreground">
             <ShinyText text="CryptoPulse Pro" speed={5} className="font-semibold text-foreground" />
@@ -124,7 +124,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => toast.info('CryptoPulse Pro unlocks institutional feeds and unlimited alerts. All features are currently enabled in this preview session.')}
-            className="mt-2.5 w-full rounded-lg bg-[#FFB300] hover:bg-[#FFA000] py-1.5 px-3 text-xs font-semibold text-slate-950 shadow-sm transition-colors cursor-pointer"
+            className="mt-2.5 w-full rounded-lg bg-accent hover:bg-accent-hover py-1.5 px-3 text-xs font-semibold text-[var(--accent-contrast)] shadow-sm transition-colors cursor-pointer"
           >
             Learn More
           </button>

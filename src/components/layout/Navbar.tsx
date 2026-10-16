@@ -27,32 +27,32 @@ export function Navbar() {
   const isLive = connectionStatus === 'connected' && lastUpdate !== null
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 border-b border-border bg-[var(--sidebar-header)]/95 backdrop-blur-md">
       <div className="flex h-14 sm:h-15 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Mobile Toggle & Brand Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleSidebar}
-            className="rounded-lg p-1.5 text-[#94A3B8] transition-colors hover:bg-[#1E232E] hover:text-[#F0F4F8] lg:hidden"
+            className="rounded-lg p-1.5 text-muted transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
             aria-label="Toggle sidebar"
           >
             <Menu className="h-5 w-5" />
           </button>
 
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFB300] text-slate-950 shadow-sm group-hover:bg-[#FFA000] transition-colors">
-              <Sparkles className="h-4 w-4 text-slate-950" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-[var(--accent-contrast)] shadow-sm group-hover:bg-accent-hover transition-colors">
+              <Sparkles className="h-4 w-4 text-[var(--accent-contrast)]" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-bold tracking-tight text-[#F0F4F8] font-heading">
+                <span className="text-base font-bold tracking-tight text-foreground font-heading">
                   CryptoPulse
                 </span>
-                <span className="rounded bg-[#FFB300]/10 border border-[#FFB300]/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                  <ShinyText text="PRO" speed={4} className="text-[#FFB300] font-bold" />
+                <span className="rounded bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                  <ShinyText text="PRO" speed={4} className="text-accent font-bold" />
                 </span>
               </div>
-              <div className="text-[10px] text-[#94A3B8] leading-tight">Market Intelligence</div>
+              <div className="text-[10px] text-muted leading-tight">Market Intelligence</div>
             </div>
           </Link>
         </div>
@@ -62,13 +62,13 @@ export function Navbar() {
           <button
             type="button"
             onClick={openCommandPalette}
-            className="group relative flex w-full items-center rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs text-[#94A3B8] transition-all hover:border-[#FFB300]/50 hover:bg-[#1E232E]/90 hover:text-[#F0F4F8]"
+            className="group relative flex w-full items-center rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-xs text-muted transition-all hover:border-accent/50 hover:bg-surface-elevated/90 hover:text-foreground"
           >
-            <Search className="h-3.5 w-3.5 text-[#94A3B8] group-hover:text-[#FFB300] transition-colors mr-2 shrink-0" />
-            <span className="truncate text-left text-xs text-[#94A3B8] group-hover:text-[#F0F4F8]">
+            <Search className="h-3.5 w-3.5 text-muted group-hover:text-accent transition-colors mr-2 shrink-0" />
+            <span className="truncate text-left text-xs text-muted group-hover:text-foreground">
               Search coins, symbols, or categories...
             </span>
-            <div className="ml-auto flex items-center rounded bg-[#151921] px-1.5 py-0.5 text-[10px] font-mono text-[#94A3B8] border border-[#262D38]">
+            <div className="ml-auto flex items-center rounded bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border">
               Ctrl K
             </div>
           </button>
@@ -79,15 +79,15 @@ export function Navbar() {
           {/* Live Feed Status Pill */}
           {isLive ? (
             <div
-              className="inline-flex items-center gap-1.5 rounded-md border border-[#00E676]/30 bg-[#00E676]/10 px-2.5 py-1 text-xs font-semibold text-[#00E676]"
+              className="inline-flex items-center gap-1.5 rounded-md border border-positive/30 bg-positive/10 px-2.5 py-1 text-xs font-semibold text-positive"
               title="Streaming live ticks from Binance WebSocket"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-[#00E676] animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-positive animate-pulse" />
               <span>Live Feed</span>
             </div>
           ) : (
             <div
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-[#262D38] bg-[#1E232E] px-2.5 py-1 text-xs font-medium text-[#94A3B8]"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-elevated px-2.5 py-1 text-xs font-medium text-muted"
               title={connectionStatus === 'connecting' ? 'Connecting to Binance WebSocket…' : 'WebSocket feed disconnected'}
             >
               <WifiOff className="h-3 w-3" />

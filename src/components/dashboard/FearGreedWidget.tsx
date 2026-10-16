@@ -86,8 +86,8 @@ export function FearGreedWidget({
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-[#262D38] bg-[#151921] p-5 text-center flex flex-col items-center justify-center">
-        <div className="text-xs uppercase font-mono tracking-wider text-[#94A3B8] mb-4 font-semibold">
+      <div className="rounded-xl border border-border bg-surface p-5 text-center flex flex-col items-center justify-center">
+        <div className="text-xs uppercase font-mono tracking-wider text-muted mb-4 font-semibold">
           Fear &amp; Greed Index
         </div>
         <Skeleton className="w-36 h-36 rounded-full mx-auto" />
@@ -99,20 +99,20 @@ export function FearGreedWidget({
 
   if (error || !data || data.value === null || data.value === undefined || Number.isNaN(data.value)) {
     return (
-      <div className="rounded-xl border border-[#262D38] bg-[#151921] p-5 text-center flex flex-col items-center justify-center">
-        <div className="text-xs uppercase font-mono tracking-wider text-[#94A3B8] mb-4 font-semibold">
+      <div className="rounded-xl border border-border bg-surface p-5 text-center flex flex-col items-center justify-center">
+        <div className="text-xs uppercase font-mono tracking-wider text-muted mb-4 font-semibold">
           Fear &amp; Greed Index
         </div>
-        <div className="w-36 h-36 flex items-center justify-center rounded-full border border-dashed border-[#262D38] bg-[#1E232E]/50 mb-3">
-          <AlertCircle className="h-8 w-8 text-[#FFB300]" />
+        <div className="w-36 h-36 flex items-center justify-center rounded-full border border-dashed border-border bg-surface-elevated/50 mb-3">
+          <AlertCircle className="h-8 w-8 text-accent" />
         </div>
-        <div className="text-sm font-semibold text-[#F0F4F8]">Data Unavailable</div>
-        <div className="text-xs text-[#94A3B8] max-w-xs mt-1">
+        <div className="text-sm font-semibold text-foreground">Data Unavailable</div>
+        <div className="text-xs text-muted max-w-xs mt-1">
           {error instanceof Error ? error.message : 'Live market sentiment index could not be retrieved.'}
         </div>
         <button
           onClick={() => refetch()}
-          className="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer"
+          className="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-accent hover:bg-accent-hover px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] transition-colors cursor-pointer"
         >
           <RefreshCw className="h-3 w-3" /> Retry
         </button>
@@ -202,12 +202,12 @@ export function FearGreedWidget({
         </span>
 
         {/* Data Source & Verified Timestamp */}
-        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#94A3B8] font-mono">
-          <span className="text-[#94A3B8]">Alternative.me</span>
+        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted font-mono">
+          <span className="text-muted">Alternative.me</span>
           {formattedUpdate && (
             <>
-              <span className="text-[#64748B]">•</span>
-              <span className="text-[#94A3B8]">{formattedUpdate}</span>
+              <span className="text-muted/60">•</span>
+              <span className="text-muted">{formattedUpdate}</span>
             </>
           )}
         </div>

@@ -178,13 +178,13 @@ export default function Dashboard() {
       {/* 1. HEADER & GREETING */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#262D38] pb-3.5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F0F4F8]">Market Overview</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">Market Overview</h1>
           {validUserName ? (
-            <p className="mt-0.5 text-xs text-[#94A3B8]">
+            <p className="mt-0.5 text-xs text-muted">
               {greeting}, {validUserName}. Real-time cryptocurrency market intelligence and execution monitoring.
             </p>
           ) : (
-            <p className="mt-0.5 text-xs text-[#94A3B8]">
+            <p className="mt-0.5 text-xs text-muted">
               Real-time cryptocurrency market intelligence and execution monitoring.
             </p>
           )}
@@ -192,29 +192,29 @@ export default function Dashboard() {
 
         {/* Compact market status and timestamp */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] px-2.5 py-1">
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1">
             {connectionStatus === 'connected' ? (
               <>
-                <span className="h-1.5 w-1.5 rounded-full bg-[#00E676] animate-pulse" />
-                <span className="font-semibold text-[#00E676]">Binance Live</span>
-                <span className="font-mono text-[11px] text-[#94A3B8]">({latency}ms)</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-positive animate-pulse" />
+                <span className="font-semibold text-positive">Binance Live</span>
+                <span className="font-mono text-[11px] text-muted">({latency}ms)</span>
               </>
             ) : connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? (
               <>
-                <span className="h-1.5 w-1.5 rounded-full bg-[#FFB300] animate-pulse" />
-                <span className="font-medium text-[#FFB300]">Reconnecting…</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+                <span className="font-medium text-accent">Reconnecting…</span>
               </>
             ) : (
               <>
-                <span className="h-1.5 w-1.5 rounded-full bg-[#FF5252]" />
-                <span className="font-medium text-[#FF5252]">Feed Offline</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-negative" />
+                <span className="font-medium text-negative">Feed Offline</span>
               </>
             )}
           </div>
 
-          <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] px-2.5 py-1 text-[#94A3B8] font-mono text-[11px]">
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-muted font-mono text-[11px]">
             <span>Sync:</span>
-            <span className="text-[#F0F4F8]">
+            <span className="text-foreground">
               {lastUpdate
                 ? new Date(lastUpdate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
                 : 'Connecting…'}
@@ -586,7 +586,7 @@ export default function Dashboard() {
                   </Link>
 
                   <div className="hidden sm:block w-20 shrink-0">
-                    <Sparkline symbol={item.symbol} color={(item.change ?? 0) >= 0 ? '#00E676' : '#FF5252'} />
+                    <Sparkline symbol={item.symbol} isPositive={(item.change ?? 0) >= 0} />
                   </div>
 
                   <div className="text-right shrink-0">

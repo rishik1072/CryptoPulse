@@ -1,9 +1,9 @@
 .rubber-segment {
-  --rs-track: #151921;
+  --rs-track: var(--surface-elevated, #1B2230);
   --rs-thumb: var(--accent, #FFB300);
-  --rs-ink: var(--muted, #94A3B8);
-  --rs-ink-active: #0B0E14;
-  --rs-border: var(--border, #262D38);
+  --rs-ink: var(--muted, #8491A5);
+  --rs-ink-active: var(--accent-contrast, #0B0E14);
+  --rs-border: var(--border, #283140);
   --rs-radius: 8px;
   --rs-inset: 3px;
   --rs-thumb-radius: 6px;
@@ -35,11 +35,11 @@
 
 :root[data-theme='light'] .rubber-segment,
 .light .rubber-segment {
-  --rs-track: #E9EDF3;
+  --rs-track: #E2E8F0;
   --rs-thumb: var(--accent, #E5A000);
   --rs-ink: var(--muted, #64748B);
-  --rs-ink-active: #0B0E14;
-  --rs-border: var(--border, #E2E8F0);
+  --rs-ink-active: var(--accent-contrast, #172033);
+  --rs-border: var(--border, #DCE3EC);
 }
 
 .rubber-segment[data-equal] {

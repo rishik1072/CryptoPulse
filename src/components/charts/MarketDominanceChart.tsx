@@ -34,10 +34,10 @@ export function MarketDominanceChart({ btc, eth }: MarketDominanceChartProps) {
           </Pie>
           <Tooltip 
             contentStyle={{ 
-              backgroundColor: 'var(--surface-elevated, #1B2230)', 
-              border: '1px solid var(--border, #262D38)', 
+              backgroundColor: 'var(--tooltip-bg, #1B2230)', 
+              border: '1px solid var(--tooltip-border, #283140)', 
               borderRadius: '12px',
-              color: 'var(--foreground, #F0F4F8)',
+              color: 'var(--tooltip-text, #F0F4F8)',
               fontSize: '12px',
             }} 
           />

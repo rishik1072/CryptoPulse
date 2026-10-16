@@ -35,14 +35,14 @@ export default function Alerts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F0F4F8]">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
               Price Alerts
             </h1>
-            <span className="text-[11px] font-medium font-mono text-[#94A3B8] bg-[#151921] border border-[#262D38] px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-medium font-mono text-muted bg-surface border border-border px-2 py-0.5 rounded-full">
               {alerts.length} Total
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-[#94A3B8]">
+          <p className="mt-0.5 text-xs text-muted">
             Automated price triggers &bull; {activeCount} active &bull; {triggeredCount} triggered
           </p>
         </div>
@@ -52,7 +52,7 @@ export default function Alerts() {
             <button
               onClick={clearTriggered}
               title="Reset all triggered alerts back to active"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] hover:bg-[#1E232E] hover:text-[#FFB300] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-elevated hover:text-accent transition-colors cursor-pointer"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Reset Triggered</span>
@@ -61,7 +61,7 @@ export default function Alerts() {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent hover:bg-accent-hover px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] transition-colors cursor-pointer shadow-sm"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>New Alert</span>
@@ -70,7 +70,7 @@ export default function Alerts() {
       </div>
 
       {/* 2. Filter Toolbar */}
-      <div className="flex items-center justify-between gap-2.5 rounded-xl border border-[#262D38] bg-[#151921] p-2">
+      <div className="flex items-center justify-between gap-2.5 rounded-xl border border-border bg-surface p-2">
         <div className="flex items-center gap-1">
           {[
             { id: 'all', label: `All (${alerts.length})` },
@@ -84,8 +84,8 @@ export default function Alerts() {
                 onClick={() => setFilterMode(tab.id as 'all' | 'triggered' | 'active')}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#1E232E] text-[#FFB300] font-semibold border border-[#FFB300]/40 shadow-sm'
-                    : 'text-[#94A3B8] hover:text-[#F0F4F8] hover:bg-[#1E232E] border border-transparent'
+                    ? 'bg-surface-elevated text-accent font-semibold border border-accent/40 shadow-sm'
+                    : 'text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent'
                 }`}
               >
                 {tab.label}
@@ -94,13 +94,13 @@ export default function Alerts() {
           })}
         </div>
 
-        <div className="text-[11px] font-mono text-[#94A3B8] px-1 hidden sm:block">
-          Showing <span className="text-[#F0F4F8] font-semibold">{filteredAlerts.length}</span> alerts
+        <div className="text-[11px] font-mono text-muted px-1 hidden sm:block">
+          Showing <span className="text-foreground font-semibold">{filteredAlerts.length}</span> alerts
         </div>
       </div>
 
       {/* 3. Alerts Card List */}
-      <div className="rounded-xl border border-[#262D38] bg-[#151921] overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
         {filteredAlerts.length === 0 ? (
           <EmptyState
             icon={<Bell className="h-8 w-8 text-[#94A3B8]" />}

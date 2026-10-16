@@ -418,16 +418,16 @@ export default function AssetDetail() {
         </div>
       )}
 
-      <div className="rounded-xl border border-[#262D38] bg-[#151921] p-5 sm:p-6 shadow-sm">
+      <div className="rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
         <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="flex flex-col justify-between gap-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <img src={coin.image.large} alt={coin.name} className="h-14 w-14 rounded-xl border border-[#262D38] bg-[#1E232E]" />
+                <img src={coin.image.large} alt={coin.name} className="h-14 w-14 rounded-xl border border-border bg-surface-elevated" />
                 <div>
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-2xl font-bold tracking-tight text-[#F0F4F8] sm:text-3xl">{coin.name}</h1>
-                    <div className="rounded-md border border-[#262D38] bg-[#1E232E] px-2 py-0.5 text-xs font-mono font-medium uppercase text-[#94A3B8]">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{coin.name}</h1>
+                    <div className="rounded-md border border-border bg-surface-elevated px-2 py-0.5 text-xs font-mono font-medium uppercase text-muted">
                       {coin.symbol.toUpperCase()}
                     </div>
                   </div>
@@ -459,17 +459,17 @@ export default function AssetDetail() {
                       </span>
                     )}
                     {resolved.source === 'unavailable' && (
-                      <span className="inline-flex items-center rounded-lg bg-slate-500/10 border border-slate-500/20 px-2 py-0.5 text-xs font-medium text-[#94A3B8]">
+                      <span className="inline-flex items-center rounded-lg bg-muted/10 border border-border px-2 py-0.5 text-xs font-medium text-muted">
                         Unavailable
                       </span>
                     )}
                     {resolved.change24h !== null ? (
-                      <div className={`flex items-center gap-1 text-sm font-semibold font-mono tabular-nums ${isPositive ? 'text-[#00E676]' : 'text-[#FF5252]'}`}>
+                      <div className={`flex items-center gap-1 text-sm font-semibold font-mono tabular-nums ${isPositive ? 'text-positive' : 'text-negative'}`}>
                         {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                         {change24h.toFixed(2)}%
                       </div>
                     ) : (
-                      <div className="text-xs text-[#94A3B8] font-normal">—</div>
+                      <div className="text-xs text-muted font-normal">—</div>
                     )}
                   </div>
                 </div>
@@ -490,13 +490,13 @@ export default function AssetDetail() {
                       })
                     }
                   }}
-                  className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface cursor-pointer"
                 >
-                  <Star className={`h-3.5 w-3.5 ${watchlistItems.some(w => w.coinId === coinId) ? 'fill-[#FFB300] text-[#FFB300]' : 'text-[#94A3B8]'}`} />
+                  <Star className={`h-3.5 w-3.5 ${watchlistItems.some(w => w.coinId === coinId) ? 'fill-accent text-accent' : 'text-muted'}`} />
                   {watchlistItems.some(w => w.coinId === coinId) ? 'Watching' : 'Watchlist'}
                 </button>
-                <button className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] cursor-pointer">
-                  <Share2 className="h-3.5 w-3.5 text-[#94A3B8]" /> Share
+                <button className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface cursor-pointer">
+                  <Share2 className="h-3.5 w-3.5 text-muted" /> Share
                 </button>
               </div>
             </div>
@@ -504,8 +504,8 @@ export default function AssetDetail() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {stats.map((stat, index) => (
                 <SpotlightCard key={index} className="p-3.5">
-                  <div className="text-[11px] uppercase tracking-wider font-medium text-[#94A3B8]">{stat.label}</div>
-                  <div className="mt-1.5 text-lg font-bold tracking-tight text-[#F0F4F8] font-mono tabular-nums">
+                  <div className="text-[11px] uppercase tracking-wider font-medium text-muted">{stat.label}</div>
+                  <div className="mt-1.5 text-lg font-bold tracking-tight text-foreground font-mono tabular-nums">
                     <AnimatedCounter
                       value={stat.value}
                       prefix={stat.prefix}
@@ -518,10 +518,10 @@ export default function AssetDetail() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4.5 sm:p-5 flex flex-col justify-between">
+          <div className="rounded-xl border border-border bg-surface p-4.5 sm:p-5 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#F0F4F8]">
-                <Zap className="h-3.5 w-3.5 text-[#FFB300]" /> Fast Execution
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+                <Zap className="h-3.5 w-3.5 text-accent" /> Fast Execution
               </div>
               <div className="mt-3.5 space-y-2.5">
                 <button
@@ -529,7 +529,7 @@ export default function AssetDetail() {
                     setTradeMode('buy')
                     setIsTradeOpen(true)
                   }}
-                  className="flex w-full items-center justify-between rounded-lg border border-[#00E676]/30 bg-[#00E676]/10 px-3.5 py-2.5 text-left text-xs font-semibold text-[#00E676] transition hover:bg-[#00E676]/20 cursor-pointer"
+                  className="flex w-full items-center justify-between rounded-lg border border-positive/30 bg-positive/10 px-3.5 py-2.5 text-left text-xs font-semibold text-positive transition hover:bg-positive/20 cursor-pointer"
                 >
                   <span>Quick Buy {coin.symbol.toUpperCase()}</span>
                   <ArrowRightLeft className="h-3.5 w-3.5" />
@@ -539,32 +539,32 @@ export default function AssetDetail() {
                     setTradeMode('sell')
                     setIsTradeOpen(true)
                   }}
-                  className="flex w-full items-center justify-between rounded-lg border border-[#FF5252]/30 bg-[#FF5252]/10 px-3.5 py-2.5 text-left text-xs font-semibold text-[#FF5252] transition hover:bg-[#FF5252]/20 cursor-pointer"
+                  className="flex w-full items-center justify-between rounded-lg border border-negative/30 bg-negative/10 px-3.5 py-2.5 text-left text-xs font-semibold text-negative transition hover:bg-negative/20 cursor-pointer"
                 >
                   <span>Quick Sell {coin.symbol.toUpperCase()}</span>
                   <ArrowRightLeft className="h-3.5 w-3.5 rotate-180" />
                 </button>
               </div>
             </div>
-            <div className="mt-4 rounded-lg border border-[#262D38] bg-[#0B0E14] p-3 text-xs text-[#F0F4F8]">
-              <div className="flex items-center gap-1.5 font-medium text-[#F0F4F8]">
-                <BrainCircuit className="h-3.5 w-3.5 text-[#FFB300]" /> Momentum Assessment
+            <div className="mt-4 rounded-lg border border-border bg-surface-elevated p-3 text-xs text-foreground">
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <BrainCircuit className="h-3.5 w-3.5 text-accent" /> Momentum Assessment
               </div>
-              <p className="mt-1.5 text-[#94A3B8] leading-relaxed text-[11px]">{sentiment.detail}</p>
+              <p className="mt-1.5 text-muted leading-relaxed text-[11px]">{sentiment.detail}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-[#262D38] bg-[#151921] overflow-hidden shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#262D38] px-5 py-4">
+      <div className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
           <div>
-            <div className="text-base font-semibold tracking-tight text-[#F0F4F8]">Interactive Technical Chart</div>
-            <div className="text-xs text-[#94A3B8]">Real-time candlesticks with volume analysis</div>
+            <div className="text-base font-semibold tracking-tight text-foreground">Interactive Technical Chart</div>
+            <div className="text-xs text-muted">Real-time candlesticks with volume analysis</div>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {['Momentum', 'Liquidity', 'Trend'].map((indicator) => (
-              <div key={indicator} className="rounded-md border border-[#262D38] bg-[#1E232E] px-2.5 py-1 text-xs font-medium text-[#94A3B8]">
+              <div key={indicator} className="rounded-md border border-border bg-surface-elevated px-2.5 py-1 text-xs font-medium text-muted">
                 {indicator}
               </div>
             ))}
@@ -578,28 +578,28 @@ export default function AssetDetail() {
 
       <div className="grid gap-6 xl:grid-cols-3">
         <GlassCard>
-          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
-            <Newspaper className="h-4 w-4 text-[#FFB300]" /> Recent News
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <Newspaper className="h-4 w-4 text-accent" /> Recent News
           </div>
           <div className="space-y-2.5">
             {news?.map((item) => (
-              <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="block rounded-lg border border-[#262D38] bg-[#0B0E14] p-3 transition hover:bg-[#1E232E] group">
-                <div className="text-xs font-medium text-[#F0F4F8] group-hover:text-[#FFB300] transition-colors line-clamp-2">{item.title}</div>
-                <div className="mt-2 text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">{item.source}</div>
+              <a key={item.id} href={item.url} target="_blank" rel="noreferrer noopener" className="block rounded-lg border border-border bg-surface-elevated p-3 transition hover:bg-surface group">
+                <div className="text-xs font-medium text-foreground group-hover:text-accent transition-colors line-clamp-2">{item.title}</div>
+                <div className="mt-2 text-[10px] uppercase font-mono tracking-wider text-muted">{item.source}</div>
               </a>
             ))}
           </div>
         </GlassCard>
 
         <GlassCard>
-          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
-            <Activity className="h-4 w-4 text-[#00E676]" /> Ecosystem Updates
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <Activity className="h-4 w-4 text-positive" /> Ecosystem Updates
           </div>
           <div className="space-y-2.5">
             {(statusUpdates?.status_updates ?? []).slice(0, 4).map((event, index) => (
-              <div key={`${event.category}-${index}`} className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3">
-                <div className="text-xs font-medium text-[#F0F4F8] line-clamp-2">{event.description}</div>
-                <div className="mt-2 flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">
+              <div key={`${event.category}-${index}`} className="rounded-lg border border-border bg-surface-elevated p-3">
+                <div className="text-xs font-medium text-foreground line-clamp-2">{event.description}</div>
+                <div className="mt-2 flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-muted">
                   <span>{event.category}</span>
                   <span>{new Date(event.created_at).toLocaleDateString()}</span>
                 </div>
@@ -609,23 +609,23 @@ export default function AssetDetail() {
         </GlassCard>
 
         <GlassCard>
-          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
-            <Landmark className="h-4 w-4 text-[#FFB300]" /> Exchange Liquidity
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <Landmark className="h-4 w-4 text-accent" /> Exchange Liquidity
           </div>
           <div className="space-y-3">
-            <div className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3.5">
-              <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">Primary Exchange Venue</div>
-              <div className="mt-1.5 text-lg font-bold text-[#F0F4F8]">
+            <div className="rounded-lg border border-border bg-surface-elevated p-3.5">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-muted">Primary Exchange Venue</div>
+              <div className="mt-1.5 text-lg font-bold text-foreground">
                 {topTicker ? topTicker.market.name : 'Data syncing...'}
               </div>
-              <div className="mt-1 text-xs text-[#94A3B8] font-mono tabular-nums">
+              <div className="mt-1 text-xs text-muted font-mono tabular-nums">
                 {topTicker ? formatValue(topTicker.converted_volume.usd, '$') : formatValue(volume, '$')}
               </div>
             </div>
-            <div className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3.5">
-              <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">24H Volume / Market Cap</div>
-              <div className="mt-1.5 text-lg font-bold text-[#F0F4F8] font-mono tabular-nums">{formatValue(volume, '$')}</div>
-              <div className="mt-1 text-xs text-[#94A3B8] font-mono tabular-nums">Turnover ratio: {marketCap ? `${((volume / marketCap) * 100).toFixed(2)}%` : '—'}</div>
+            <div className="rounded-lg border border-border bg-surface-elevated p-3.5">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-muted">24H Volume / Market Cap</div>
+              <div className="mt-1.5 text-lg font-bold text-foreground font-mono tabular-nums">{formatValue(volume, '$')}</div>
+              <div className="mt-1 text-xs text-muted font-mono tabular-nums">Turnover ratio: {marketCap ? `${((volume / marketCap) * 100).toFixed(2)}%` : '—'}</div>
             </div>
           </div>
         </GlassCard>
@@ -633,8 +633,8 @@ export default function AssetDetail() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <GlassCard>
-          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
-            <BarChart3 className="h-4 w-4 text-[#FFB300]" /> Historical Extremes
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <BarChart3 className="h-4 w-4 text-accent" /> Historical Extremes
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
@@ -643,9 +643,9 @@ export default function AssetDetail() {
               { label: 'All-Time Low (ATL)', value: atl > 0 ? atl : null, prefix: '$', decimals: atl < 1 ? 4 : 2 },
               { label: 'Drawdown from ATH', value: ath > 0 && currentPrice != null ? ((currentPrice / ath) * 100 - 100) : null, suffix: '%', decimals: 2 },
             ].map((item, index) => (
-              <div key={index} className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-3.5">
-                <div className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8]">{item.label}</div>
-                <div className="mt-1.5 text-base font-bold text-[#F0F4F8] font-mono tabular-nums">
+              <div key={index} className="rounded-lg border border-border bg-surface-elevated p-3.5">
+                <div className="text-[10px] uppercase font-mono tracking-wider text-muted">{item.label}</div>
+                <div className="mt-1.5 text-base font-bold text-foreground font-mono tabular-nums">
                   {item.value !== null ? (
                     <AnimatedCounter
                       value={item.value}
@@ -654,7 +654,7 @@ export default function AssetDetail() {
                       decimals={item.decimals}
                     />
                   ) : (
-                    <span className="text-[#94A3B8] font-normal">—</span>
+                    <span className="text-muted font-normal">—</span>
                   )}
                 </div>
               </div>
@@ -663,13 +663,13 @@ export default function AssetDetail() {
         </GlassCard>
 
         <GlassCard>
-          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-[#F0F4F8]">
-            <Sparkles className="h-4 w-4 text-[#FFB300]" /> Market Conviction
+          <div className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <Sparkles className="h-4 w-4 text-accent" /> Market Conviction
           </div>
-          <div className="rounded-lg border border-[#262D38] bg-[#0B0E14] p-4">
+          <div className="rounded-lg border border-border bg-surface-elevated p-4">
             <div className={`text-xl font-bold ${sentiment.tone}`}>{sentiment.label}</div>
-            <p className="mt-2 text-xs leading-relaxed text-[#F0F4F8]">{sentiment.detail}</p>
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] text-[#94A3B8] font-mono">
+            <p className="mt-2 text-xs leading-relaxed text-foreground">{sentiment.detail}</p>
+            <div className="mt-4 flex items-center gap-1.5 text-[11px] text-muted font-mono">
               <Clock3 className="h-3.5 w-3.5" /> Synthesized from live book flow & volume
             </div>
           </div>
@@ -677,9 +677,9 @@ export default function AssetDetail() {
       </div>
 
       <GlassCard>
-        <div className="mb-3 text-base font-semibold tracking-tight text-[#F0F4F8]">Asset Profile: {coin.name}</div>
+        <div className="mb-3 text-base font-semibold tracking-tight text-foreground">Asset Profile: {coin.name}</div>
         <div
-          className="prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed text-[#94A3B8]"
+          className="prose max-w-none text-xs sm:text-sm leading-relaxed text-muted"
           dangerouslySetInnerHTML={{
             __html: sanitizeHtml(
               coin.description.en
@@ -690,12 +690,12 @@ export default function AssetDetail() {
         />
         <div className="mt-6 flex flex-wrap gap-2.5">
           {coin.links.homepage[0] && (
-            <a href={coin.links.homepage[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] hover:text-[#FFB300]">
+            <a href={coin.links.homepage[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface hover:text-accent">
               Official Website <ExternalLink className="h-3 w-3" />
             </a>
           )}
           {coin.links.repos_url.github[0] && (
-            <a href={coin.links.repos_url.github[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#1E232E] px-3 py-1.5 text-xs font-medium text-[#F0F4F8] transition hover:bg-[#262D38] hover:text-[#FFB300]">
+            <a href={coin.links.repos_url.github[0]} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface hover:text-accent">
               Source Repository
             </a>
           )}

@@ -2,6 +2,8 @@ import { useEffect, useRef, memo, useCallback } from 'react'
 import { createChart, ColorType, LineSeries } from 'lightweight-charts'
 import type { IChartApi, ISeriesApi, LineData, Time } from 'lightweight-charts'
 import { useLivePriceStore } from '@/store/useLivePriceStore'
+import { useAuthStore } from '@/store/useAuthStore'
+import { DESIGN_TOKENS } from '@/lib/theme'
 
 interface RealTimePriceChartProps {
   symbol: string
@@ -19,6 +21,8 @@ export const RealTimePriceChart = memo(({
   const seriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const isInitializedRef = useRef(false)
 
+  const { preferences } = useAuthStore()
+
   const symUpper = symbol.toUpperCase()
   const currentPrice = useLivePriceStore(
     useCallback((state) => state.prices[symUpper]?.price, [symUpper])
@@ -28,19 +32,24 @@ export const RealTimePriceChart = memo(({
   useEffect(() => {
     if (!chartRef.current) return
 
+    const isCurrentlyDark = preferences.theme === 'dark' || document.documentElement.classList.contains('dark')
+    const tokens = isCurrentlyDark ? DESIGN_TOKENS.dark : DESIGN_TOKENS.light
+
     const chart = createChart(chartRef.current, {
       width: Math.max(chartRef.current.clientWidth, 100),
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#94a3b8',
+        textColor: tokens.mutedText,
       },
       grid: {
-        vertLines: { color: 'rgba(148, 163, 184, 0.08)' },
-        horzLines: { color: 'rgba(148, 163, 184, 0.08)' },
+        vertLines: { color: tokens.chartGrid },
+        horzLines: { color: tokens.chartGrid },
       },
       crosshair: {
         mode: 0,
+        vertLine: { color: tokens.chartCrosshair },
+        horzLine: { color: tokens.chartCrosshair },
       },
       rightPriceScale: {
         borderVisible: false,
@@ -66,7 +75,7 @@ export const RealTimePriceChart = memo(({
       crosshairMarkerVisible: true,
       crosshairMarkerRadius: 4,
       crosshairMarkerBorderColor: color,
-      crosshairMarkerBackgroundColor: '#050816',
+      crosshairMarkerBackgroundColor: tokens.surfaceElevated,
     })
 
     chartInstance.current = chart
@@ -95,7 +104,25 @@ export const RealTimePriceChart = memo(({
         // Safe cleanup
       }
     }
-  }, [height, color])
+  }, [height, color, preferences.theme])
+
+  // Dynamically sync theme changes without recreation
+  useEffect(() => {
+    if (!chartInstance.current) return
+    const isCurrentlyDark = preferences.theme === 'dark'
+    const tokens = isCurrentlyDark ? DESIGN_TOKENS.dark : DESIGN_TOKENS.light
+    chartInstance.current.applyOptions({
+      layout: { textColor: tokens.mutedText },
+      grid: {
+        vertLines: { color: tokens.chartGrid },
+        horzLines: { color: tokens.chartGrid },
+      },
+      crosshair: {
+        vertLine: { color: tokens.chartCrosshair },
+        horzLine: { color: tokens.chartCrosshair },
+      },
+    })
+  }, [preferences.theme])
 
   // Incrementally append or update price points using O(1) series.update()
   useEffect(() => {

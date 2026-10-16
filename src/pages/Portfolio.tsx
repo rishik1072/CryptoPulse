@@ -108,21 +108,21 @@ export default function Portfolio() {
             ) : (
               <span
                 data-testid="portfolio-status-badge"
-                className="text-[11px] font-medium font-mono text-[#94A3B8] bg-[#151921] border border-[#262D38] px-2 py-0.5 rounded-full"
+                className="text-[11px] font-medium font-mono text-muted bg-surface border border-border px-2 py-0.5 rounded-full"
               >
                 {portfolioData.length} Holdings
               </span>
             )}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>Real-time position tracking, asset allocation, and multi-source accounting.</span>
-            <span className="text-[#262D38]">&bull;</span>
-            <span className="inline-flex items-center gap-1.5 font-medium text-[#F0F4F8]">
-              <Radio className={`h-3 w-3 ${connectionStatus === 'connected' ? 'text-[#00E676] animate-pulse' : 'text-[#94A3B8]'}`} />
+            <span className="text-border">&bull;</span>
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <Radio className={`h-3 w-3 ${connectionStatus === 'connected' ? 'text-positive animate-pulse' : 'text-muted'}`} />
               {connectionStatus === 'connected' ? 'Binance live feed' : connectionStatus === 'reconnecting' ? 'Reconnecting feed' : 'Polling REST feed'}
             </span>
             {isLoading && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#FFB300] ml-1 font-mono">
+              <span className="inline-flex items-center gap-1 text-[11px] text-accent ml-1 font-mono">
                 <Loader2 className="h-3 w-3 animate-spin" /> Syncing...
               </span>
             )}
@@ -135,16 +135,16 @@ export default function Portfolio() {
               onClick={() => retrySync()}
               disabled={isLoading}
               data-testid="portfolio-header-retry-btn"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] hover:bg-[#1A202C] px-3 py-1.5 text-xs font-semibold text-[#F0F4F8] transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-foreground transition-colors cursor-pointer disabled:opacity-50"
               title="Retry synchronizing portfolio with database"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin text-[#FFB300]' : 'text-[#94A3B8]'}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin text-accent' : 'text-muted'}`} />
               <span>{isLoading ? 'Retrying...' : 'Retry'}</span>
             </button>
           )}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent hover:bg-accent-hover px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] transition-colors cursor-pointer shadow-sm"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Add Asset</span>
@@ -335,11 +335,11 @@ export default function Portfolio() {
       {/* 3. Main Content: Allocation Chart & Holdings Table */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4 items-start">
         {/* Allocation Chart Card */}
-        <div className="rounded-xl border border-[#262D38] bg-[#151921] p-4 shadow-sm xl:col-span-1">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#F0F4F8]">
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm xl:col-span-1">
+          <div className="text-xs font-semibold uppercase tracking-wider text-foreground">
             Allocation
           </div>
-          <p className="text-[11px] text-[#94A3B8] mt-0.5">Distribution across priced positions</p>
+          <p className="text-[11px] text-muted mt-0.5">Distribution across priced positions</p>
           {isFailedLoad ? (
             <div data-testid="portfolio-chart-error" className="flex h-48 flex-col items-center justify-center gap-1.5 text-center p-4">
               <AlertCircle className="h-6 w-6 text-[#FF5252]/70 mb-1" />
@@ -379,10 +379,10 @@ export default function Portfolio() {
                         ]
                       }}
                       contentStyle={{
-                        background: 'var(--surface-elevated, #151921)',
-                        border: '1px solid var(--border, #262D38)',
+                        background: 'var(--tooltip-bg, #1B2230)',
+                        border: '1px solid var(--tooltip-border, #283140)',
                         borderRadius: '0.5rem',
-                        color: 'var(--foreground, #F0F4F8)',
+                        color: 'var(--tooltip-text, #F0F4F8)',
                         fontSize: '12px',
                       }}
                     />
@@ -394,9 +394,9 @@ export default function Portfolio() {
                   <div key={item.name} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-[#94A3B8]">{item.name}</span>
+                      <span className="text-muted">{item.name}</span>
                     </div>
-                    <span className="font-mono text-[#F0F4F8] font-medium tabular-nums">
+                    <span className="font-mono text-foreground font-medium tabular-nums">
                       {item.pct.toFixed(1)}%
                     </span>
                   </div>
@@ -411,9 +411,9 @@ export default function Portfolio() {
         </div>
 
         {/* Holdings Table Card */}
-        <div className="rounded-xl border border-[#262D38] bg-[#151921] overflow-hidden shadow-sm xl:col-span-3">
-          <div className="flex flex-col gap-2.5 border-b border-[#262D38] bg-[#0B0E14] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#F0F4F8]">
+        <div className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm xl:col-span-3">
+          <div className="flex flex-col gap-2.5 border-b border-border bg-surface-elevated px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs font-semibold uppercase tracking-wider text-foreground">
               Holdings ({filteredHoldings.length})
             </div>
             <input
@@ -421,41 +421,41 @@ export default function Portfolio() {
               placeholder="Search holdings..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-56 rounded-lg border border-[#262D38] bg-[#151921] px-3 py-1.5 text-xs text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
+              className="w-full sm:w-56 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
             />
           </div>
 
           {isFailedLoad ? (
             <div data-testid="portfolio-error-state" className="p-8 text-center flex flex-col items-center justify-center">
-              <div className="h-12 w-12 rounded-full bg-[#FF5252]/10 border border-[#FF5252]/30 flex items-center justify-center mb-3">
+              <div className="h-12 w-12 rounded-full bg-negative/10 border border-negative/30 flex items-center justify-center mb-3">
                 {isMissingTable ? (
-                  <Database className="h-6 w-6 text-[#FF5252]" />
+                  <Database className="h-6 w-6 text-negative" />
                 ) : (
-                  <AlertCircle className="h-6 w-6 text-[#FF5252]" />
+                  <AlertCircle className="h-6 w-6 text-negative" />
                 )}
               </div>
-              <h3 className="text-base font-bold text-[#F0F4F8]">
+              <h3 className="text-base font-bold text-foreground">
                 {isMissingTable ? 'Database Schema Setup Required' : 'Failed to Load Portfolio'}
               </h3>
-              <p className="mt-1 text-xs text-[#94A3B8] max-w-md">
+              <p className="mt-1 text-xs text-muted max-w-md">
                 {isMissingTable
                   ? "The table 'public.holdings' could not be found in the Supabase schema cache. Please apply the repository migration files to initialize your database."
                   : `Could not retrieve your holdings from the database (${error}). Please check your connection or retry.`}
               </p>
 
               {isMissingTable && (
-                <div className="mt-4 p-3.5 rounded-lg border border-[#262D38] bg-[#0B0E14] text-left text-xs font-mono text-[#94A3B8] max-w-lg w-full space-y-1.5">
-                  <div className="text-[#FFB300] font-semibold text-[11px] flex items-center gap-1.5">
+                <div className="mt-4 p-3.5 rounded-lg border border-border bg-surface-elevated text-left text-xs font-mono text-muted max-w-lg w-full space-y-1.5">
+                  <div className="text-accent font-semibold text-[11px] flex items-center gap-1.5">
                     <Database className="h-3.5 w-3.5" /> Action Required: Run Migrations in Supabase
                   </div>
-                  <div className="text-[11px] text-[#F0F4F8]/90">
+                  <div className="text-[11px] text-foreground/90">
                     1. Open your Supabase Dashboard &rarr; <strong>SQL Editor</strong>
                   </div>
-                  <div className="text-[11px] text-[#F0F4F8]/90">
-                    2. Execute <span className="text-[#FFB300]">supabase/migrations/20240101000000_initial_schema.sql</span>
+                  <div className="text-[11px] text-foreground/90">
+                    2. Execute <span className="text-accent">supabase/migrations/20240101000000_initial_schema.sql</span>
                   </div>
-                  <div className="text-[11px] text-[#F0F4F8]/90">
-                    3. Execute <span className="text-[#FFB300]">supabase/migrations/20240102000000_phase3_user_persistence.sql</span>
+                  <div className="text-[11px] text-foreground/90">
+                    3. Execute <span className="text-accent">supabase/migrations/20240102000000_phase3_user_persistence.sql</span>
                   </div>
                 </div>
               )}
@@ -465,7 +465,7 @@ export default function Portfolio() {
                   onClick={() => retrySync()}
                   disabled={isLoading}
                   data-testid="portfolio-table-retry-btn"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-4 py-2 text-xs font-semibold text-slate-950 transition-colors cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent hover:bg-accent-hover px-4 py-2 text-xs font-semibold text-[var(--accent-contrast)] transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                   <span>{isLoading ? 'Retrying...' : 'Retry Connection'}</span>
@@ -473,7 +473,7 @@ export default function Portfolio() {
 
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#262D38] bg-[#151921] hover:bg-[#1A202C] px-3.5 py-2 text-xs font-semibold text-[#F0F4F8] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated px-3.5 py-2 text-xs font-semibold text-foreground transition-colors cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Add Asset</span>

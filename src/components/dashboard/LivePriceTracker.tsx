@@ -97,7 +97,7 @@ export function LivePriceTracker() {
                 )}
 
                 <div className="shrink-0">
-                  <Sparkline symbol={symbol} color={isUp ? '#00E676' : '#FF5252'} />
+                  <Sparkline symbol={symbol} isPositive={isUp} />
                 </div>
               </div>
 

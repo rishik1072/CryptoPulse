@@ -4,6 +4,48 @@ import { useAuthStore } from '../store/useAuthStore.ts'
 export type Theme = 'dark' | 'light'
 
 /**
+ * Single centralized design-token system defining exact tokens for Dark and Light themes.
+ */
+export const DESIGN_TOKENS = {
+  dark: {
+    background: '#0B0E14',
+    sidebarHeader: '#10141C',
+    surface: '#151921',
+    surfaceElevated: '#1B2230',
+    primaryText: '#F0F4F8',
+    secondaryText: '#A7B2C4',
+    mutedText: '#8491A5',
+    borders: '#283140',
+    positive: '#00E676',
+    negative: '#FF5252',
+    primaryAccent: '#FFB300',
+    primaryAccentHover: '#FFA000',
+    accentContrast: '#0B0E14',
+    chartGrid: 'rgba(40, 49, 64, 0.5)',
+    chartCrosshair: '#3B4554',
+  },
+  light: {
+    background: '#F3F5F9',
+    sidebarHeader: '#FFFFFF',
+    surface: '#FFFFFF',
+    surfaceElevated: '#F8FAFC',
+    primaryText: '#172033',
+    secondaryText: '#475569',
+    mutedText: '#64748B',
+    borders: '#DCE3EC',
+    positive: '#008A4B',
+    negative: '#D92D3E',
+    primaryAccent: '#E5A000',
+    primaryAccentHover: '#CC8F00',
+    accentContrast: '#172033',
+    chartGrid: 'rgba(220, 227, 236, 0.85)',
+    chartCrosshair: '#CBD5E1',
+  },
+} as const
+
+export type DesignThemeTokens = typeof DESIGN_TOKENS.dark
+
+/**
  * Resolves the currently stored theme from localStorage or defaults to 'dark'.
  */
 export function getSavedTheme(): Theme {

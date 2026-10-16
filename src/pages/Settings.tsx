@@ -388,15 +388,15 @@ export default function Settings() {
           {activeTab === 'preferences' && (
             <GlassCard className="space-y-5">
               <div>
-                <h3 className="text-base font-semibold text-[#F0F4F8]">Platform Preferences</h3>
-                <p className="text-xs text-[#94A3B8] mt-0.5">Adapt CryptoPulse settings to your trading workflow.</p>
+                <h3 className="text-base font-semibold text-foreground">Platform Preferences</h3>
+                <p className="text-xs text-muted mt-0.5">Adapt CryptoPulse settings to your trading workflow.</p>
               </div>
 
               {/* Local preferences selector options */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs text-[#F0F4F8]">
+                <label className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs text-foreground">
                   <div className="flex items-center gap-2.5">
-                    <MoonStar className="h-4 w-4 text-[#FFB300]" />
+                    <MoonStar className="h-4 w-4 text-accent" />
                     <span className="font-medium">Display Mode</span>
                   </div>
                   <select
@@ -405,22 +405,22 @@ export default function Settings() {
                       const next = event.target.value as 'dark' | 'light'
                       switchTheme(next)
                     }}
-                    className="rounded-lg border border-border bg-surface-elevated text-foreground px-2.5 py-1 text-xs focus:outline-none focus:border-accent cursor-pointer"
+                    className="rounded-lg border border-border bg-surface text-foreground px-2.5 py-1 text-xs focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value="dark">Dark Theme</option>
                     <option value="light">Light Theme</option>
                   </select>
                 </label>
 
-                <label className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs text-[#F0F4F8]">
+                <label className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs text-foreground">
                   <div className="flex items-center gap-2.5">
-                    <Languages className="h-4 w-4 text-[#FFB300]" />
+                    <Languages className="h-4 w-4 text-accent" />
                     <span className="font-medium">Language</span>
                   </div>
                   <select
                     value={preferences.language}
                     onChange={(event) => updatePreferences({ language: event.target.value })}
-                    className="rounded-lg border border-[#262D38] bg-[#1E232E] text-[#F0F4F8] px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFB300] cursor-pointer"
+                    className="rounded-lg border border-border bg-surface text-foreground px-2.5 py-1 text-xs focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value="en">English (US)</option>
                     <option value="es">Español (ES)</option>
@@ -429,15 +429,15 @@ export default function Settings() {
                   </select>
                 </label>
 
-                <label className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs text-[#F0F4F8]">
+                <label className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs text-foreground">
                   <div className="flex items-center gap-2.5">
-                    <Wallet2 className="h-4 w-4 text-[#FFB300]" />
+                    <Wallet2 className="h-4 w-4 text-accent" />
                     <span className="font-medium">Base Currency</span>
                   </div>
                   <select
                     value={preferences.currency}
                     onChange={(event) => updatePreferences({ currency: event.target.value })}
-                    className="rounded-lg border border-[#262D38] bg-[#1E232E] text-[#F0F4F8] px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFB300] cursor-pointer"
+                    className="rounded-lg border border-border bg-surface text-foreground px-2.5 py-1 text-xs focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
@@ -446,15 +446,15 @@ export default function Settings() {
                   </select>
                 </label>
 
-                <label className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs text-[#F0F4F8]">
+                <label className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs text-foreground">
                   <div className="flex items-center gap-2.5">
-                    <Globe2 className="h-4 w-4 text-[#FFB300]" />
+                    <Globe2 className="h-4 w-4 text-accent" />
                     <span className="font-medium">Timezone</span>
                   </div>
                   <select
                     value={preferences.timezone}
                     onChange={(event) => updatePreferences({ timezone: event.target.value })}
-                    className="rounded-lg border border-[#262D38] bg-[#1E232E] text-[#F0F4F8] px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFB300] cursor-pointer"
+                    className="rounded-lg border border-border bg-surface text-foreground px-2.5 py-1 text-xs focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value="UTC">UTC (GMT)</option>
                     <option value="America/New_York">New York (EST)</option>
@@ -467,57 +467,57 @@ export default function Settings() {
 
               {/* Notification switches */}
               <div className="space-y-2.5 pt-2">
-                <div className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider">Alerts & Notifications</div>
+                <div className="text-[11px] font-semibold text-muted uppercase tracking-wider">Alerts & Notifications</div>
                 
-                <div className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs">
                   <div>
-                    <div className="font-medium text-[#F0F4F8]">Global Notifications</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-0.5">Master toggle for system notices.</div>
+                    <div className="font-medium text-foreground">Global Notifications</div>
+                    <div className="text-[11px] text-muted mt-0.5">Master toggle for system notices.</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={preferences.notifications}
                     onChange={() => handleNotificationToggle('global')}
-                    className="accent-[#FFB300] h-4 w-4 cursor-pointer"
+                    className="accent-accent h-4 w-4 cursor-pointer"
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs">
                   <div>
-                    <div className="font-medium text-[#F0F4F8]">Browser Notifications</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-0.5">Receive desktop notifications when price threshold alerts trigger.</div>
+                    <div className="font-medium text-foreground">Browser Notifications</div>
+                    <div className="text-[11px] text-muted mt-0.5">Receive desktop notifications when price threshold alerts trigger.</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={preferences.browserNotifications}
                     onChange={() => handleNotificationToggle('browser')}
-                    className="accent-[#FFB300] h-4 w-4 cursor-pointer"
+                    className="accent-accent h-4 w-4 cursor-pointer"
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs">
                   <div>
-                    <div className="font-medium text-[#F0F4F8]">Email Summaries</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-0.5">Send portfolio performance digests to {user?.email}</div>
+                    <div className="font-medium text-foreground">Email Summaries</div>
+                    <div className="text-[11px] text-muted mt-0.5">Send portfolio performance digests to {user?.email}</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={preferences.emailNotifications}
                     onChange={() => handleNotificationToggle('email')}
-                    className="accent-[#FFB300] h-4 w-4 cursor-pointer"
+                    className="accent-accent h-4 w-4 cursor-pointer"
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-[#262D38] bg-[#0B0E14] p-3.5 text-xs">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-surface-elevated p-3.5 text-xs">
                   <div>
-                    <div className="font-medium text-[#F0F4F8]">Continuous Alert Evaluation</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-0.5">Evaluate active price conditions continuously in the background.</div>
+                    <div className="font-medium text-foreground">Continuous Alert Evaluation</div>
+                    <div className="text-[11px] text-muted mt-0.5">Evaluate active price conditions continuously in the background.</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={preferences.priceAlerts}
                     onChange={() => handleNotificationToggle('price')}
-                    className="accent-[#FFB300] h-4 w-4 cursor-pointer"
+                    className="accent-accent h-4 w-4 cursor-pointer"
                   />
                 </div>
               </div>

@@ -9,6 +9,8 @@ import { ApiError } from '@/services/coingecko'
 import { AlertCircle, Loader2, RotateCcw } from 'lucide-react'
 import { RubberSegment } from '@/components/reactbits/RubberSegment'
 
+import { DESIGN_TOKENS } from '@/lib/theme'
+
 interface ProfessionalOHLCChartProps {
   coinId: string
   symbol: string
@@ -55,33 +57,35 @@ export const ProfessionalOHLCChart = memo(({
     if (!chartRef.current) return
 
     const isCurrentlyDark = document.documentElement.classList.contains('dark') || themeRef.current === 'dark'
-    const bgColor = isCurrentlyDark ? '#0B0E14' : '#ffffff'
-    const textColor = isCurrentlyDark ? '#94A3B8' : '#64748B'
-    const gridColor = isCurrentlyDark ? 'rgba(38, 45, 56, 0.45)' : 'rgba(226, 232, 240, 0.8)'
+    const tokens = isCurrentlyDark ? DESIGN_TOKENS.dark : DESIGN_TOKENS.light
 
     const chart = createChart(chartRef.current, {
       width: Math.max(chartRef.current.clientWidth, 100),
       height,
       layout: {
-        background: { type: ColorType.Solid, color: bgColor },
-        textColor,
+        background: { type: ColorType.Solid, color: tokens.surface },
+        textColor: tokens.mutedText,
       },
       grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
+        vertLines: { color: tokens.chartGrid },
+        horzLines: { color: tokens.chartGrid },
       },
-      crosshair: { mode: 0 },
+      crosshair: {
+        mode: 0,
+        vertLine: { color: tokens.chartCrosshair },
+        horzLine: { color: tokens.chartCrosshair },
+      },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false, timeVisible: true },
     })
 
     const candle = chart.addSeries(CandlestickSeries, {
-      upColor: '#00E676',
-      downColor: '#FF5252',
-      borderUpColor: '#00E676',
-      borderDownColor: '#FF5252',
-      wickUpColor: '#00E676',
-      wickDownColor: '#FF5252',
+      upColor: tokens.positive,
+      downColor: tokens.negative,
+      borderUpColor: tokens.positive,
+      borderDownColor: tokens.negative,
+      wickUpColor: tokens.positive,
+      wickDownColor: tokens.negative,
     })
 
     chartInstance.current = chart
@@ -112,20 +116,33 @@ export const ProfessionalOHLCChart = memo(({
     if (!chartInstance.current) return
 
     const isCurrentlyDark = preferences.theme === 'dark'
-    const bgColor = isCurrentlyDark ? '#0B0E14' : '#ffffff'
-    const textColor = isCurrentlyDark ? '#94A3B8' : '#64748B'
-    const gridColor = isCurrentlyDark ? 'rgba(38, 45, 56, 0.45)' : 'rgba(226, 232, 240, 0.8)'
+    const tokens = isCurrentlyDark ? DESIGN_TOKENS.dark : DESIGN_TOKENS.light
 
     chartInstance.current.applyOptions({
       layout: {
-        background: { type: ColorType.Solid, color: bgColor },
-        textColor,
+        background: { type: ColorType.Solid, color: tokens.surface },
+        textColor: tokens.mutedText,
       },
       grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
+        vertLines: { color: tokens.chartGrid },
+        horzLines: { color: tokens.chartGrid },
+      },
+      crosshair: {
+        vertLine: { color: tokens.chartCrosshair },
+        horzLine: { color: tokens.chartCrosshair },
       },
     })
+
+    if (candleSeries.current) {
+      candleSeries.current.applyOptions({
+        upColor: tokens.positive,
+        downColor: tokens.negative,
+        borderUpColor: tokens.positive,
+        borderDownColor: tokens.negative,
+        wickUpColor: tokens.positive,
+        wickDownColor: tokens.negative,
+      })
+    }
   }, [preferences.theme])
 
   // Load and sanitize historical OHLC data
@@ -205,7 +222,7 @@ export const ProfessionalOHLCChart = memo(({
         <button
           onClick={() => refetch()}
           title="Refresh candlestick data"
-          className="inline-flex items-center gap-1 text-xs text-[#94A3B8] hover:text-[#F0F4F8] p-1.5 rounded-lg hover:bg-[#1E232E] transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground p-1.5 rounded-lg hover:bg-surface-elevated transition-colors cursor-pointer"
           aria-label="Refresh chart data"
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -218,14 +235,14 @@ export const ProfessionalOHLCChart = memo(({
 
         {isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/85 backdrop-blur-xs text-foreground">
-            <Loader2 className="h-7 w-7 animate-spin text-[#FFB300] mb-2" />
+            <Loader2 className="h-7 w-7 animate-spin text-accent mb-2" />
             <div className="text-xs font-medium text-muted">Loading candlestick data…</div>
           </div>
         )}
 
         {isError && (!ohlcData || ohlcData.length === 0) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface/90 backdrop-blur-xs p-6 text-center text-foreground">
-            <AlertCircle className="h-8 w-8 text-[#FFB300] mb-2" />
+            <AlertCircle className="h-8 w-8 text-accent mb-2" />
             <div className="text-sm font-semibold text-foreground">Historical OHLC data temporarily unavailable</div>
             <div className="text-xs text-muted max-w-sm mt-1">
               {error instanceof ApiError && error.isRateLimited
@@ -234,19 +251,19 @@ export const ProfessionalOHLCChart = memo(({
             </div>
             <button
               onClick={() => refetch()}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#FFB300] hover:bg-[#FFA000] px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition-colors cursor-pointer shadow-md shadow-[#FFB300]/15"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent hover:bg-accent-hover px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-contrast)] transition-colors cursor-pointer shadow-md shadow-accent/15"
             >
-              <RotateCcw className="h-3.5 w-3.5 text-slate-950" /> Retry
+              <RotateCcw className="h-3.5 w-3.5 text-[var(--accent-contrast)]" /> Retry
             </button>
-            <div className="text-[11px] text-[#00E676] mt-2 font-mono">
+            <div className="text-[11px] text-positive mt-2 font-mono">
               Live Binance price updates continue to stream in real-time
             </div>
           </div>
         )}
 
         {isError && ohlcData && ohlcData.length > 0 && (
-          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-[#FFB300]/30 bg-[#FFB300]/10 px-2.5 py-1 text-xs text-[#FFB300] backdrop-blur-md">
-            <AlertCircle className="h-3.5 w-3.5 text-[#FFB300]" />
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs text-accent backdrop-blur-md">
+            <AlertCircle className="h-3.5 w-3.5 text-accent" />
             <span>Cached historical data (stale)</span>
           </div>
         )}

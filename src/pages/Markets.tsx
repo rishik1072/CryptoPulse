@@ -291,28 +291,28 @@ export default function Markets() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F0F4F8] font-heading">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
               Cryptocurrency Markets
             </h1>
-            <span className="text-[11px] font-medium font-mono text-[#94A3B8] bg-[#151921] border border-[#262D38] px-2 py-0.5 rounded-full tabular-nums">
+            <span className="text-[11px] font-medium font-mono text-muted bg-surface border border-border px-2 py-0.5 rounded-full tabular-nums">
               {coins.length} Assets
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-[#94A3B8]">
+          <p className="mt-0.5 text-xs text-muted">
             Real-time quotes, 24-hour volume, and market capitalization intelligence.
           </p>
         </div>
 
         {/* Asset search aligned with heading */}
         <div className="relative w-full sm:w-72 md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8] pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search asset or symbol..."
             aria-label="Search cryptocurrencies"
-            className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#1E232E] border border-[#262D38] rounded-lg text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
+            className="w-full pl-9 pr-8 py-1.5 text-xs bg-surface-elevated border border-border rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
           />
           {searchQuery && (
             <button

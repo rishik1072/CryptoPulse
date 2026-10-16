@@ -9,10 +9,16 @@ interface SparklinePoint {
 interface SparklineProps {
   symbol?: string
   color?: string
+  isPositive?: boolean
   data?: number[]
 }
 
-export const Sparkline = memo(function Sparkline({ symbol, color = '#7c3aed', data: explicitData }: SparklineProps) {
+export const Sparkline = memo(function Sparkline({
+  symbol,
+  color,
+  isPositive,
+  data: explicitData,
+}: SparklineProps) {
   const symUpper = symbol ? symbol.toUpperCase() : ''
   const hasExplicitData = Boolean(explicitData && explicitData.length > 0)
 
@@ -40,16 +46,24 @@ export const Sparkline = memo(function Sparkline({ symbol, color = '#7c3aed', da
     return points.map((val) => ({ value: val }))
   }, [points])
 
+  const strokeColor =
+    color ??
+    (isPositive !== undefined
+      ? isPositive
+        ? 'var(--positive, #00E676)'
+        : 'var(--negative, #FF5252)'
+      : 'var(--accent, #FFB300)')
+
   if (chartData.length < 2) {
     return (
       <div className="flex h-8 w-20 items-center justify-center">
         {hasLivePrice ? (
-          <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-mono text-slate-400">
-            <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1 rounded bg-muted/10 px-1.5 py-0.5 text-[10px] font-mono text-muted">
+            <span className="h-1 w-1 rounded-full bg-positive animate-pulse" />
             live
           </span>
         ) : (
-          <span className="text-[11px] text-slate-400 font-mono">—</span>
+          <span className="text-[11px] text-muted font-mono">—</span>
         )}
       </div>
     )
@@ -61,7 +75,7 @@ export const Sparkline = memo(function Sparkline({ symbol, color = '#7c3aed', da
         <Line 
           type="monotone" 
           dataKey="value" 
-          stroke={color} 
+          stroke={strokeColor} 
           strokeWidth={1.5} 
           dot={false} 
           isAnimationActive={false}

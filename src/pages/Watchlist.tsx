@@ -88,18 +88,18 @@ export default function Watchlist() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F0F4F8]">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
               Watchlist
             </h1>
-            <span className="text-[11px] font-medium font-mono text-[#94A3B8] bg-[#151921] border border-[#262D38] px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-medium font-mono text-muted bg-surface border border-border px-2 py-0.5 rounded-full">
               {items.length} Assets
             </span>
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
             <span>Custom tracking lists with priority pinning and real-time updates.</span>
-            <span className="text-[#262D38]">&bull;</span>
-            <span className="inline-flex items-center gap-1.5 font-medium text-[#F0F4F8]">
-              <Radio className={`h-3 w-3 ${connectionStatus === 'connected' ? 'text-[#00E676] animate-pulse' : 'text-[#94A3B8]'}`} />
+            <span className="text-border">&bull;</span>
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <Radio className={`h-3 w-3 ${connectionStatus === 'connected' ? 'text-positive animate-pulse' : 'text-muted'}`} />
               {connectionStatus === 'connected' ? 'Binance live feed' : connectionStatus === 'reconnecting' ? 'Reconnecting' : 'Polling feed'}
             </span>
           </div>
@@ -107,20 +107,20 @@ export default function Watchlist() {
 
         {/* Search input aligned with header */}
         <div className="relative w-full sm:w-72 md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8] pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search watchlist..."
             aria-label="Search watchlist"
-            className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#151921] border border-[#262D38] rounded-lg text-[#F0F4F8] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#FFB300] focus:ring-1 focus:ring-[#FFB300] transition-colors"
+            className="w-full pl-9 pr-8 py-1.5 text-xs bg-surface-elevated border border-border rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F0F4F8] p-0.5 cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-0.5 cursor-pointer"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />
@@ -130,7 +130,7 @@ export default function Watchlist() {
       </div>
 
       {/* 2. Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 rounded-xl border border-[#262D38] bg-[#151921] p-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 rounded-xl border border-border bg-surface p-2">
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
           {[
             { label: 'All', value: 'all' },
@@ -162,7 +162,7 @@ export default function Watchlist() {
       </div>
 
       {/* 3. Watchlist Card & List */}
-      <div className="rounded-xl border border-[#262D38] bg-[#151921] overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border bg-surface overflow-hidden shadow-sm">
         {watchlistWithData.length === 0 ? (
           <EmptyState
             icon={<Star className="h-8 w-8 text-[#94A3B8]" />}
@@ -288,7 +288,7 @@ export default function Watchlist() {
                       </div>
 
                       <div className="w-24 hidden md:block">
-                        <Sparkline symbol={item.symbol} color={isPositive ? '#00E676' : '#FF5252'} />
+                        <Sparkline symbol={item.symbol} isPositive={isPositive} />
                       </div>
 
                       <div className="w-16 flex items-center justify-end gap-1">
